@@ -1,0 +1,462 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Archivo+Black&family=DM+Sans:ital,wght@0,400;0,700;1,400&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  .wrap {
+    background: #0f0f0f;
+    padding: 12px;
+    font-family: 'DM Sans', sans-serif;
+    min-height: 800px;
+    position: relative;
+  }
+
+  .noise {
+    position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0; opacity: 0.4;
+  }
+
+  .content { position: relative; z-index: 1; }
+
+  .topbar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 4px 10px;
+  }
+  .topbar span {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 0.58rem; letter-spacing: 4px; color: #fff; text-transform: uppercase;
+  }
+
+  /* ── HERO CARD ── */
+  .hero {
+    background: #E8323A;
+    border-radius: 14px;
+    padding: 0;
+    margin-bottom: 10px;
+    position: relative;
+    overflow: hidden;
+    height: 200px;
+  }
+
+  .hero-bg-img {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; object-position: center top;
+    mix-blend-mode: multiply; opacity: 0.55; filter: contrast(1.3) saturate(0.6);
+  }
+
+  .hero-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(120deg, #E8323Aee 40%, transparent 100%);
+  }
+
+  .hero-content {
+    position: relative; z-index: 2;
+    padding: 22px 20px;
+  }
+
+  .hero-tag {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.58rem; letter-spacing: 3px; color: #F5E64290;
+    text-transform: uppercase; margin-bottom: 4px;
+  }
+
+  .hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 4.5rem; line-height: 0.85;
+    color: #F5E642;
+    -webkit-text-stroke: 2px #111;
+    letter-spacing: 2px;
+  }
+
+  .hero-sub {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.7rem; color: #ffffffaa;
+    font-style: italic; margin-top: 8px; letter-spacing: 1px;
+  }
+
+  .explosion {
+    position: absolute;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.6rem; letter-spacing: 1px;
+    background: #F5E642; color: #111;
+    padding: 6px 10px; border-radius: 2px;
+    border: 2px solid #111;
+    transform: rotate(-8deg);
+    z-index: 3;
+  }
+
+  .hero-cutout {
+    position: absolute; right: -10px; bottom: 0;
+    height: 195px; z-index: 3;
+    filter: drop-shadow(-4px 0 0 #111) drop-shadow(0 -4px 0 #111);
+    object-fit: contain;
+  }
+
+  /* ── STARBURST ── */
+  .starburst {
+    position: absolute; z-index: 4;
+    width: 60px; height: 60px;
+  }
+
+  /* ── NAV PILLS ── */
+  .nav-row {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;
+  }
+
+  .nav-pill {
+    background: #1c1c1c; border: 1.5px solid #333;
+    color: #ffffff70;
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 0.55rem; letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 6px 13px; border-radius: 999px;
+    cursor: pointer; transition: all 0.15s;
+  }
+
+  .nav-pill.active { background: #F5E642; color: #111; border-color: #F5E642; }
+  .nav-pill:hover:not(.active) { border-color: #F5E642; color: #F5E642; }
+
+  .exit-pill {
+    margin-left: auto;
+    background: #E8323A20; border: 1.5px solid #E8323A60;
+    color: #E8323A;
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 0.55rem; letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 6px 13px; border-radius: 999px; cursor: pointer;
+  }
+
+  /* ── GRID ── */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* DROP ZONE */
+  .card-drop {
+    grid-column: 1 / 3;
+    background: #fff;
+    border-radius: 14px;
+    padding: 16px;
+    position: relative; overflow: hidden;
+    cursor: pointer;
+    transition: background 0.2s;
+    border: 3px solid #111;
+  }
+
+  .card-drop:hover { background: #f9f9f9; }
+
+  .drop-dots {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(circle, #11111110 1.5px, transparent 1.5px);
+    background-size: 10px 10px;
+  }
+
+  .drop-inner {
+    border: 2.5px dashed #11111130;
+    border-radius: 8px;
+    padding: 22px 16px;
+    text-align: center;
+    position: relative; z-index: 1;
+  }
+
+  .speech-bubble {
+    display: inline-block;
+    background: #F5E642;
+    border: 2.5px solid #111;
+    border-radius: 12px;
+    padding: 7px 16px;
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 0.72rem; color: #111;
+    margin-bottom: 14px;
+    position: relative;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .speech-bubble::after {
+    content: '';
+    position: absolute; bottom: -12px; left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #111;
+  }
+
+  .speech-bubble::before {
+    content: '';
+    position: absolute; bottom: -8px; left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #F5E642;
+    z-index: 1;
+  }
+
+  .drop-arrow {
+    font-size: 2rem; color: #E8323A; display: block;
+    margin: 4px auto 6px;
+    animation: bounce 1.2s ease-in-out infinite;
+  }
+
+  @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }
+
+  .drop-title {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 0.9rem; color: #111; text-transform: uppercase; letter-spacing: 1px;
+  }
+
+  .drop-sub { font-size: 0.65rem; color: #11111160; margin-top: 3px; font-style: italic; }
+
+  /* SETTINGS */
+  .card-settings {
+    background: #7B5CF0;
+    border-radius: 14px;
+    padding: 16px;
+    border: 2.5px solid #111;
+    position: relative; overflow: hidden;
+  }
+
+  .settings-stripes {
+    position: absolute; top: 0; right: 0;
+    width: 30px; height: 100%;
+    background: repeating-linear-gradient(
+      -45deg, #ffffff10 0px, #ffffff10 4px, transparent 4px, transparent 10px
+    );
+  }
+
+  .s-label {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 0.52rem; color: #ffffff80;
+    letter-spacing: 3px; text-transform: uppercase; margin-bottom: 5px;
+  }
+
+  .card-settings select {
+    width: 100%; background: #ffffff15; border: 1.5px solid #ffffff30;
+    color: #fff; font-family: 'DM Sans', sans-serif;
+    font-size: 0.76rem; padding: 7px 10px;
+    border-radius: 8px; cursor: pointer; appearance: none; margin-bottom: 10px;
+  }
+
+  .card-settings select:focus { outline: none; border-color: #F5E642; }
+
+  .check-row { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
+  .check-item { display: flex; align-items: center; gap: 7px; cursor: pointer; }
+  .check-item input { accent-color: #F5E642; width: 13px; height: 13px; }
+  .check-item span {
+    font-size: 0.64rem; color: #ffffffaa;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+
+  /* FORGE */
+  .card-forge {
+    background: #F5E642;
+    border-radius: 14px;
+    padding: 16px;
+    border: 2.5px solid #111;
+    display: flex; flex-direction: column; justify-content: space-between;
+    position: relative; overflow: hidden;
+  }
+
+  .card-forge .diagonal-stripe {
+    position: absolute; bottom: 0; right: 0;
+    width: 50px; height: 100%;
+    background: repeating-linear-gradient(
+      -45deg, #11111115 0px, #11111115 5px, transparent 5px, transparent 12px
+    );
+  }
+
+  .out-label { font-size: 0.56rem; color: #11111170; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; }
+  .out-val { font-family: 'Bebas Neue', sans-serif; font-size: 1.3rem; color: #111; letter-spacing: 2px; }
+
+  .forge-btn {
+    display: block; width: 100%; margin-top: 12px;
+    padding: 12px 8px;
+    background: #111; border: none; border-radius: 10px;
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 0.68rem; letter-spacing: 2px; text-transform: uppercase;
+    color: #F5E642; cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    position: relative; z-index: 1;
+  }
+
+  .forge-btn:hover { background: #222; }
+  .forge-btn:active { transform: scale(0.97); }
+
+  /* SIDE CARDS */
+  .card-mini {
+    border-radius: 14px; padding: 16px;
+    border: 2.5px solid #111;
+    position: relative; overflow: hidden;
+    min-height: 120px;
+  }
+
+  .card-mini h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem; line-height: 0.9;
+    position: relative; z-index: 1;
+    -webkit-text-stroke: 1px #111;
+  }
+
+  .card-mini p {
+    font-size: 0.6rem; font-style: italic;
+    letter-spacing: 1px; margin-top: 5px;
+    position: relative; z-index: 1; text-transform: uppercase;
+  }
+
+  .card-mini img.mini-cutout {
+    position: absolute; bottom: 0; right: -8px;
+    height: 110px;
+    filter: drop-shadow(-3px 0 0 #111);
+    object-fit: contain; z-index: 2;
+  }
+
+  .cm-red { background: #E8323A; }
+  .cm-red h3 { color: #F5E642; }
+  .cm-red p { color: #ffffff80; }
+
+  .cm-cyan { background: #00D4E8; }
+  .cm-cyan h3 { color: #111; }
+  .cm-cyan p { color: #11111180; }
+
+  .pow-badge {
+    position: absolute; top: 10px; right: 10px;
+    background: #F5E642; color: #111;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.9rem; letter-spacing: 1px;
+    padding: 3px 8px; border-radius: 4px;
+    border: 2px solid #111;
+    transform: rotate(6deg);
+    z-index: 3;
+  }
+</style>
+
+<div class="wrap">
+  <div class="noise"></div>
+  <div class="content">
+
+    <div class="topbar">
+      <span>ONE</span>
+      <span>★ ★ ★</span>
+      <span>v1.0.0</span>
+    </div>
+
+    <!-- HERO -->
+    <div class="hero" style="margin-bottom:10px;">
+      <img class="hero-bg-img"
+        src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Fernand_L%C3%A9ger_-_The_Mechanic_%281920%29.jpg/400px-Fernand_L%C3%A9ger_-_The_Mechanic_%281920%29.jpg"
+        alt="pop art bg" crossorigin="anonymous"
+        onerror="this.src='';this.style.display='none'"/>
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <p class="hero-tag">// one app to rule them all</p>
+        <div class="hero-title">ONE<br>APP</div>
+        <p class="hero-sub">drop it. shrink it. upscale it.</p>
+      </div>
+      <div class="explosion" style="top:14px;right:140px;">ALL-IN-ONE ★</div>
+      <img class="hero-cutout"
+        src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Roy_Lichtenstein_1976.jpg/220px-Roy_Lichtenstein_1976.jpg"
+        alt="cutout figure" crossorigin="anonymous"
+        onerror="this.style.display='none'"/>
+    </div>
+
+    <!-- NAV -->
+    <div class="nav-row">
+      <button class="nav-pill" onclick="setNav(this)">MP3 Ripper</button>
+      <button class="nav-pill" onclick="setNav(this)">Playlist</button>
+      <button class="nav-pill" onclick="setNav(this)">Shrinker</button>
+      <button class="nav-pill active" onclick="setNav(this)">Upscale</button>
+      <button class="nav-pill" onclick="setNav(this)">Gemini</button>
+      <button class="exit-pill">✕ Exit</button>
+    </div>
+
+    <div class="grid">
+
+      <!-- MINI CARD 1 -->
+      <div class="card-mini cm-red">
+        <h3>MP3<br>RIPPER</h3>
+        <p>Rip. Convert.<br>Keep.</p>
+        <div class="pow-badge">POW!</div>
+        <img class="mini-cutout"
+          src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Cat_03.jpg/220px-Cat_03.jpg"
+          alt="cutout" crossorigin="anonymous"
+          onerror="this.style.display='none'"/>
+      </div>
+
+      <!-- MINI CARD 2 -->
+      <div class="card-mini cm-cyan">
+        <h3>PLAYLIST<br>RIDER</h3>
+        <p>M3U · Spotify<br>YouTube</p>
+        <img class="mini-cutout"
+          src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Cat_03.jpg/220px-Cat_03.jpg"
+          alt="cutout" crossorigin="anonymous"
+          onerror="this.style.display='none'"/>
+      </div>
+
+      <!-- DROP ZONE -->
+      <div class="card-drop">
+        <div class="drop-dots"></div>
+        <div class="drop-inner">
+          <div class="speech-bubble">Drop your image here, baby!</div>
+          <span class="drop-arrow">↓</span>
+          <div class="drop-title">Drag &amp; Drop or Browse</div>
+          <div class="drop-sub">jpg · png · webp · max 50mb</div>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="card-settings">
+        <div class="settings-stripes"></div>
+        <div class="s-label">Format</div>
+        <select>
+          <option>Poster (A4)</option>
+          <option>Banner (A3)</option>
+          <option>Tapestry (A2)</option>
+        </select>
+        <div class="s-label">Orientation</div>
+        <select>
+          <option>Portrait</option>
+          <option>Landscape</option>
+          <option>Square</option>
+        </select>
+        <div class="check-row">
+          <label class="check-item">
+            <input type="checkbox" checked/>
+            <span>AI Enhance (FSRCNN)</span>
+          </label>
+          <label class="check-item">
+            <input type="checkbox" checked/>
+            <span>Gemini Suggestions</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- FORGE -->
+      <div class="card-forge">
+        <div class="diagonal-stripe"></div>
+        <div>
+          <div class="out-label">Output Resolution</div>
+          <div class="out-val">2480 × 3508 PX</div>
+          <div class="out-label" style="margin-top:5px;">Print-ready ✓</div>
+        </div>
+        <button class="forge-btn">⚡ Expand to Poster</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+function setNav(el) {
+  document.querySelectorAll('.nav-pill').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+}
+
+(function applyHalftone() {
+  const targets = [
+    { sel: '.hero-bg-img', blend: true },
+  ];
+
+  document.querySelectorAll('.mini-cutout').forEach((img, i) => {
+    const srcs = [
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Boombox.jpg/220px-Boombox.jpg',
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Vinyl_record_album_Lp.jpg/220px-Vinyl_record_album_Lp.jpg',
+    ];
+    img.src = srcs[i % srcs.length];
+  });
+})();
+</script>

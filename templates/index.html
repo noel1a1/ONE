@@ -1,0 +1,1825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ONE — one app to rule them all</title>
+    <meta name="description" content="ONE App — MP3 ripper, playlist collector, file shrinker, upscaler and Gemini AI powerup. One app to rule them all.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Archivo+Black&family=DM+Sans:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        /* ── RESET & BASE ── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        button, select, input[type="range"], .card-drop {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --black: #0a0a0a;
+            --red:   #E8323A;
+            --yellow:#F5E642;
+            --cyan:  #00D4E8;
+            --purple:#7B5CF0;
+            --white: #ffffff;
+            --off:   #f0f0f0;
+            --font-display: 'Bebas Neue', sans-serif;
+            --font-bold:    'Archivo Black', sans-serif;
+            --font-body:    'DM Sans', sans-serif;
+        }
+
+        html, body {
+            min-height: 100vh;
+            background: var(--black);
+            font-family: var(--font-body);
+            color: var(--white);
+            overflow-x: hidden;
+            /* iOS safe-area padding */
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        /* ── NOISE OVERLAY ── */
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+            pointer-events: none; z-index: 9999; opacity: 0.35;
+        }
+
+        /* ── LAYOUT SHELL ── */
+        .app-shell {
+            width: 100%;
+            max-width: 660px;
+            margin: 0 auto;
+            padding: 14px 14px 48px;
+            position: relative;
+        }
+        /* thin top accent bar */
+        .app-shell::before {
+            content: '';
+            display: block;
+            height: 3px;
+            background: linear-gradient(90deg, var(--red) 0%, var(--yellow) 40%, var(--cyan) 70%, var(--purple) 100%);
+            border-radius: 0 0 3px 3px;
+            margin-bottom: 12px;
+            border: none;
+        }
+
+        /* ── TOPBAR ── */
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 4px 10px;
+        }
+        .topbar-brand {
+            font-family: var(--font-bold);
+            font-size: 0.58rem;
+            letter-spacing: 4px;
+            color: var(--white);
+            text-transform: uppercase;
+        }
+        .topbar-stars { color: var(--yellow); font-size: 0.65rem; letter-spacing: 4px; }
+        .topbar-ver {
+            font-family: var(--font-bold);
+            font-size: 0.58rem;
+            letter-spacing: 2px;
+            color: #ffffff60;
+            text-transform: uppercase;
+        }
+
+        /* ── HERO ── */
+        .hero {
+            background: var(--red);
+            border-radius: 16px;
+            height: 260px;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 10px;
+            border: 2.5px solid #111;
+        }
+        .hero-overlay {
+            position: absolute; inset: 0;
+            background: linear-gradient(120deg, #E8323Aee 40%, transparent 100%);
+            z-index: 1;
+        }
+        .hero-halftone {
+            position: absolute; inset: 0;
+            background-image: radial-gradient(circle, #ffffff12 1px, transparent 1px);
+            background-size: 8px 8px;
+            z-index: 2;
+        }
+        .hero-content {
+            position: relative; z-index: 3;
+            padding: 18px 22px 34px;
+            overflow: visible;
+        }
+        .hero-tag {
+            font-family: var(--font-body);
+            font-size: 0.58rem;
+            letter-spacing: 3px;
+            color: #F5E64290;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .hero-title {
+            font-family: var(--font-display);
+            font-size: 3.6rem;
+            line-height: 0.88;
+            color: var(--yellow);
+            -webkit-text-stroke: 1.5px #111;
+            letter-spacing: 2px;
+        }
+        .hero-sub {
+            font-family: var(--font-body);
+            font-size: 0.68rem;
+            color: #ffffffcc;
+            font-style: italic;
+            margin-top: 8px;
+            letter-spacing: 1.5px;
+            white-space: normal;
+            word-break: break-word;
+            display: block;
+            position: relative;
+            z-index: 4;
+        }
+        .hero-badge {
+            position: absolute;
+            z-index: 4;
+            font-family: var(--font-bold);
+            font-size: 0.55rem;
+            letter-spacing: 1px;
+            background: var(--yellow);
+            color: #111;
+            padding: 6px 10px;
+            border-radius: 2px;
+            border: 2px solid #111;
+            transform: rotate(-8deg);
+            top: 16px; right: 120px;
+            white-space: nowrap;
+        }
+        /* scan-line shimmer on hero bottom */
+        .hero::after {
+            content: '★ ONE APP ★ RIP IT ★ SHRINK IT ★ UPSCALE IT ★';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 20px;
+            background: var(--yellow);
+            color: #111;
+            font-family: var(--font-bold);
+            font-size: 0.42rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            border-top: 2px solid #111;
+            z-index: 5;
+            pointer-events: none;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        .hero-deco {
+            position: absolute;
+            right: 0; bottom: 0;
+            width: 170px; height: 190px;
+            z-index: 3;
+            display: flex; align-items: flex-end; justify-content: flex-end;
+            overflow: hidden;
+        }
+        /* Animated stacked circles deco */
+        .deco-circles {
+            position: absolute; right: 10px; bottom: -10px;
+            width: 130px; height: 180px;
+        }
+        .deco-circles circle { fill: none; }
+
+        /* ── NAV ROW ── */
+        .nav-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: nowrap;
+            align-items: center;
+            margin-bottom: 14px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            padding-bottom: 4px;
+            /* Smooth momentum scroll on iOS */
+            -webkit-overflow-scrolling: touch;
+        }
+        .nav-row::-webkit-scrollbar { display: none; }
+        .nav-pill {
+            background: #1c1c1c;
+            border: 1.5px solid #333;
+            color: #ffffff70;
+            font-family: var(--font-bold);
+            font-size: 0.58rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            padding: 8px 14px;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .nav-pill.active { background: var(--yellow); color: #111; border-color: var(--yellow); }
+        .nav-pill:hover:not(.active) { border-color: var(--yellow); color: var(--yellow); }
+
+        .nav-exit {
+            margin-left: auto;
+            background: #E8323A20;
+            border: 1.5px solid #E8323A60;
+            color: var(--red);
+            font-family: var(--font-bold);
+            font-size: 0.58rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            padding: 8px 14px;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .nav-exit:hover { background: var(--red); color: var(--white); border-color: var(--red); }
+
+        /* ── TOOL PANELS ── */
+        .tool-panel { display: none; }
+        .tool-panel.active { display: block; }
+
+        /* ── CARD BASE ── */
+        .card {
+            border-radius: 14px;
+            border: 2.5px solid #111;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ── SECTION HEADING inside card ── */
+        .section-label {
+            font-family: var(--font-bold);
+            font-size: 0.52rem;
+            color: #ffffff80;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .section-label.dark { color: #11111180; }
+
+        /* ── DROP ZONE CARD ── */
+        .card-drop {
+            background: #1c1c1c;
+            padding: 16px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        .card-drop:hover { background: #262626; }
+        .drop-dots {
+            position: absolute; inset: 0;
+            background-image: radial-gradient(circle, var(--cyan) 1.5px, transparent 1.5px);
+            background-size: 10px 10px;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+        .drop-inner {
+            border: 2.5px dashed #ffffff40;
+            border-radius: 8px;
+            padding: 22px 16px;
+            text-align: center;
+            position: relative; z-index: 1;
+            transition: border-color 0.2s;
+        }
+        .card-drop.dragover .drop-inner { border-color: var(--cyan); }
+        .card-drop.dragover { background: #2a2a2a; }
+        .speech-bubble {
+            display: inline-block;
+            background: var(--yellow);
+            border: 2.5px solid #111;
+            border-radius: 12px;
+            padding: 7px 16px;
+            font-family: var(--font-bold);
+            font-size: 0.72rem;
+            color: #111;
+            margin-bottom: 16px;
+            position: relative;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .speech-bubble::after {
+            content: '';
+            position: absolute; bottom: -13px; left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: #111;
+        }
+        .speech-bubble::before {
+            content: '';
+            position: absolute; bottom: -8px; left: 50%;
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-top-color: var(--yellow);
+            z-index: 1;
+        }
+        .drop-arrow {
+            font-size: 2.2rem;
+            color: var(--cyan);
+            display: block;
+            margin: 4px auto 8px;
+            animation: bounce 1.2s ease-in-out infinite;
+        }
+        @keyframes bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(6px)} }
+        .drop-title {
+            font-family: var(--font-bold);
+            font-size: 0.88rem;
+            color: var(--white);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .drop-sub { font-size: 0.65rem; color: #ffffff60; margin-top: 4px; font-style: italic; }
+        .drop-filename {
+            margin-top: 8px;
+            font-size: 0.72rem;
+            color: var(--cyan);
+            font-family: var(--font-bold);
+            word-break: break-all;
+        }
+        .preview-thumb {
+            max-width: 90px;
+            max-height: 90px;
+            display: block;
+            margin: 10px auto 0;
+            border: 2px solid #111;
+            border-radius: 4px;
+            object-fit: cover;
+        }
+        input[type="file"].file-input { display: none; }
+
+        /* ── TWO-COL ROW ── */
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+
+        /* ── SETTINGS CARD (purple) ── */
+        .card-settings {
+            background: var(--purple);
+            padding: 16px;
+        }
+        .settings-stripes {
+            position: absolute; top: 0; right: 0;
+            width: 30px; height: 100%;
+            background: repeating-linear-gradient(
+                -45deg, #ffffff10 0px, #ffffff10 4px, transparent 4px, transparent 10px
+            );
+        }
+        .card-settings select,
+        .card-settings input[type="text"],
+        .card-settings input[type="url"] {
+            width: 100%;
+            background: #ffffff15;
+            border: 1.5px solid #ffffff30;
+            color: var(--white);
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            padding: 7px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            appearance: none;
+            margin-bottom: 10px;
+            outline: none;
+        }
+        .card-settings select:focus,
+        .card-settings input[type="text"]:focus,
+        .card-settings input[type="url"]:focus {
+            border-color: var(--yellow);
+            background: #ffffff20;
+        }
+        .card-settings select option { background: #3b2f9f; color: var(--white); }
+        .check-row { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+        .check-item { display: flex; align-items: center; gap: 7px; cursor: pointer; }
+        .check-item input { accent-color: var(--yellow); width: 13px; height: 13px; cursor: pointer; }
+        .check-item span { font-size: 0.64rem; color: #ffffffaa; text-transform: uppercase; letter-spacing: 1px; }
+
+        /* ── FORGE CARD (yellow) ── */
+        .card-forge {
+            background: var(--yellow);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .card-forge .diagonal-stripe {
+            position: absolute; bottom: 0; right: 0;
+            width: 50px; height: 100%;
+            background: repeating-linear-gradient(
+                -45deg, #11111115 0px, #11111115 5px, transparent 5px, transparent 12px
+            );
+        }
+        .out-label { font-size: 0.56rem; color: #11111170; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 2px; }
+        .out-val { font-family: var(--font-display); font-size: 1.3rem; color: #111; letter-spacing: 2px; line-height: 1; }
+
+        /* ── FORGE BUTTON ── */
+        .forge-btn {
+            display: block; width: 100%;
+            padding: 12px 8px;
+            background: #111; border: none; border-radius: 10px;
+            font-family: var(--font-bold);
+            font-size: 0.68rem; letter-spacing: 2px; text-transform: uppercase;
+            color: var(--yellow); cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            position: relative; z-index: 1;
+            margin-top: 10px;
+        }
+        .forge-btn:hover { background: #222; }
+        .forge-btn:active { transform: scale(0.97); }
+        .forge-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ── ACTION BUTTON (full width, red) ── */
+        .action-btn {
+            display: block; width: 100%;
+            padding: 14px 8px;
+            background: var(--red); border: 2.5px solid #111; border-radius: 12px;
+            font-family: var(--font-bold);
+            font-size: 0.72rem; letter-spacing: 2px; text-transform: uppercase;
+            color: var(--white); cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            margin-top: 0;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .action-btn:hover { background: #c0222a; }
+        .action-btn:active { transform: scale(0.98); }
+        .action-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        /* ── COLLECT BUTTON (cyan card) ── */
+        .card-collect-btn {
+            background: var(--cyan);
+            border: 2.5px solid #111;
+            border-radius: 12px;
+            padding: 14px 8px;
+            font-family: var(--font-bold);
+            font-size: 0.72rem; letter-spacing: 2px; text-transform: uppercase;
+            color: #111; cursor: pointer;
+            width: 100%; display: block;
+            transition: background 0.15s, transform 0.1s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .card-collect-btn:hover { background: #00b8cc; }
+        .card-collect-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        /* ── URL INPUT CARD ── */
+        .card-url {
+            background: var(--white);
+            padding: 16px;
+            margin-bottom: 10px;
+        }
+        .card-url input[type="url"],
+        .card-url input[type="text"] {
+            width: 100%;
+            background: #f5f5f5;
+            border: 2px solid #ddd;
+            color: #111;
+            font-family: var(--font-body);
+            /* 16px minimum prevents iOS auto-zoom on focus */
+            font-size: 16px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.15s;
+            /* Disable iOS auto-corrections on URL fields */
+            -webkit-appearance: none;
+        }
+        .card-url input:focus { border-color: var(--red); }
+        .card-url .section-label { color: #11111180; }
+
+        /* ── SLIDER CARD (white) ── */
+        .card-slider {
+            background: var(--white);
+            padding: 16px;
+            margin-bottom: 10px;
+        }
+        .slider-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .slider-label { font-family: var(--font-bold); font-size: 0.56rem; letter-spacing: 2px; text-transform: uppercase; color: #11111180; }
+        .slider-val { font-family: var(--font-display); font-size: 1.4rem; color: var(--red); letter-spacing: 1px; }
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--red);
+            height: 6px;
+            outline: none;
+            border-radius: 3px;
+            background: #eee;
+            cursor: pointer;
+        }
+
+        /* ── STATUS BADGE ── */
+        .status-badge {
+            display: none;
+            margin-top: 10px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-family: var(--font-bold);
+            font-size: 0.64rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .status-badge.show { display: block; }
+        .status-badge.ok { background: #d4f5e9; border: 1.5px solid #2ecc71; color: #1a7a45; }
+        .status-badge.err { background: #fde8e8; border: 1.5px solid var(--red); color: var(--red); }
+
+        /* ── LOADING BAR ── */
+        .loading-bar {
+            height: 6px;
+            width: 100%;
+            background: #eee;
+            border-radius: 3px;
+            overflow: hidden;
+            display: none;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+        }
+        .loading-bar-fill {
+            height: 100%;
+            background: var(--red);
+            animation: loadSlide 1s ease-in-out infinite alternate;
+            width: 40%;
+        }
+        @keyframes loadSlide { 0% { margin-left: 0; } 100% { margin-left: 60%; } }
+        .loading-bar.purple { border-color: var(--purple); }
+        .loading-bar.purple .loading-bar-fill { background: var(--purple); }
+        .loading-bar.cyan { border-color: var(--cyan); }
+        .loading-bar.cyan .loading-bar-fill { background: var(--cyan); }
+
+        /* ── PROGRESS LIST (collect) ── */
+        .progress-list {
+            background: #f8f8f8;
+            border-radius: 8px;
+            border: 1.5px solid #eee;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 8px 10px;
+            margin-bottom: 10px;
+            display: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        .progress-list.show { display: block; }
+        .progress-item {
+            font-size: 0.72rem;
+            padding: 4px 0;
+            color: #333;
+            border-bottom: 1px dashed #e0e0e0;
+            animation: fadeSlide 0.25s ease;
+        }
+        .progress-item:last-child { border-bottom: none; }
+        @keyframes fadeSlide { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+        /* ── MINI FEATURE CARDS ── */
+        .two-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .card-mini {
+            border-radius: 14px;
+            padding: 20px;
+            border: 2.5px solid #111;
+            position: relative;
+            overflow: hidden;
+            min-height: 140px;
+        }
+        .card-mini h3 {
+            font-family: var(--font-display);
+            font-size: 1.8rem;
+            line-height: 1.1;
+            position: relative; z-index: 1;
+            -webkit-text-stroke: 1px #111;
+            margin-bottom: 8px;
+        }
+        .card-mini p {
+            font-size: 0.65rem;
+            line-height: 1.4;
+            font-style: italic;
+            letter-spacing: 1px;
+            margin-top: 5px;
+            position: relative; z-index: 1;
+            text-transform: uppercase;
+        }
+        /* diagonal stripe accent on mini cards */
+        .card-mini::after {
+            content: '';
+            position: absolute; bottom: 0; right: 0;
+            width: 45px; height: 100%;
+            background: repeating-linear-gradient(
+                -45deg, #11111112 0px, #11111112 5px, transparent 5px, transparent 12px
+            );
+            pointer-events: none;
+        }
+        .pow-badge {
+            position: absolute; top: 10px; right: 10px;
+            background: var(--yellow); color: #111;
+            font-family: var(--font-display);
+            font-size: 0.9rem; letter-spacing: 1px;
+            padding: 3px 8px; border-radius: 4px;
+            border: 2px solid #111;
+            transform: rotate(6deg);
+            z-index: 3;
+        }
+        .cm-red { background: var(--red); }
+        .cm-red h3 { color: var(--yellow); }
+        .cm-red p { color: #ffffff80; }
+        .cm-cyan { background: var(--cyan); }
+        .cm-cyan h3 { color: #111; }
+        .cm-cyan p { color: #11111180; }
+        .cm-purple { background: var(--purple); }
+        .cm-purple h3 { color: var(--yellow); }
+        .cm-purple p { color: #ffffff80; }
+        .cm-yellow { background: var(--yellow); }
+        .cm-yellow h3 { color: #111; }
+        .cm-yellow p { color: #11111170; }
+
+        /* gemini panel accent */
+        .card-gemini-header {
+            background: var(--purple);
+            padding: 16px;
+            margin-bottom: 10px;
+            border-radius: 14px;
+            border: 2.5px solid #111;
+            position: relative;
+            overflow: hidden;
+        }
+        .card-gemini-header .settings-stripes { background: repeating-linear-gradient(-45deg,#ffffff10 0,#ffffff10 4px,transparent 4px,transparent 10px); }
+        .gemini-type-label {
+            font-family: var(--font-bold);
+            font-size: 0.52rem;
+            color: #ffffff80;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .gemini-type-info {
+            font-size: 0.68rem;
+            color: #ffffffbb;
+            font-style: italic;
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+        .card-gemini-header select {
+            width: 100%;
+            background: #ffffff15;
+            border: 1.5px solid #ffffff30;
+            color: var(--white);
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            padding: 7px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            appearance: none;
+            outline: none;
+        }
+        .card-gemini-header select:focus { border-color: var(--yellow); }
+        .card-gemini-header select option { background: #3b2f9f; }
+
+        /* ── GEMINI ACTION BUTTON ── */
+        .gemini-btn {
+            display: block; width: 100%;
+            padding: 14px 8px;
+            background: var(--purple); border: 2.5px solid #111; border-radius: 12px;
+            font-family: var(--font-bold);
+            font-size: 0.72rem; letter-spacing: 2px; text-transform: uppercase;
+            color: var(--white); cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .gemini-btn:hover { background: #6345d4; }
+        .gemini-btn:active { transform: scale(0.98); }
+        .gemini-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        /* ── EXPAND INFO BAR ── */
+        .info-bar {
+            background: #1c1c1c;
+            border-radius: 8px;
+            padding: 8px 14px;
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 10px;
+            border: 1.5px solid #333;
+        }
+        .info-bar-label { font-size: 0.58rem; color: #ffffff60; text-transform: uppercase; letter-spacing: 2px; }
+        .info-bar-val { font-family: var(--font-display); font-size: 1.1rem; color: var(--yellow); letter-spacing: 2px; }
+
+        /* ── SHUTDOWN SCREEN ── */
+        #shutdown-screen {
+            display: none;
+            position: fixed; inset: 0; z-index: 99997;
+            background: var(--black);
+            flex-direction: column;
+            align-items: center; justify-content: center;
+            text-align: center;
+        }
+        #shutdown-screen.show { display: flex; }
+        .sd-title {
+            font-family: var(--font-display);
+            font-size: 5rem; line-height: 0.9;
+            color: var(--red);
+            -webkit-text-stroke: 2px #ffffff30;
+            margin-bottom: 20px;
+        }
+        .sd-sub { font-family: var(--font-bold); font-size: 0.65rem; letter-spacing: 3px; color: var(--yellow); text-transform: uppercase; margin-bottom: 10px; }
+        .sd-hint { font-size: 0.65rem; color: #ffffff40; text-transform: uppercase; letter-spacing: 2px; }
+
+        /* ── SKIN STUDIO ── */
+        .topbar-skin-btn {
+            background: #1c1c1c;
+            border: 1.5px solid #333;
+            color: #ffffff80;
+            font-family: var(--font-bold);
+            font-size: 0.5rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            padding: 5px 11px;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-left: auto;
+        }
+        .topbar-skin-btn:hover { border-color: var(--yellow); color: var(--yellow); }
+
+        .skin-modal {
+            display: none;
+            position: fixed; inset: 0;
+            z-index: 99998;
+            background: rgba(0,0,0,0.80);
+            align-items: flex-start;
+            justify-content: flex-end;
+            padding: 16px;
+        }
+        .skin-modal.open { display: flex; }
+        .skin-panel {
+            background: #111;
+            border: 2.5px solid #333;
+            border-radius: 16px;
+            padding: 20px;
+            width: 310px;
+            max-height: calc(100vh - 32px);
+            overflow-y: auto;
+            scrollbar-width: none;
+            position: relative;
+            animation: skinSlideIn 0.2s ease;
+        }
+        .skin-panel::-webkit-scrollbar { display: none; }
+        @keyframes skinSlideIn {
+            from { transform: translateX(20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .skin-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 18px;
+            padding-bottom: 14px;
+            border-bottom: 1.5px solid #252525;
+        }
+        .skin-header-text {}
+        .skin-title {
+            font-family: var(--font-display);
+            font-size: 1.9rem;
+            color: var(--yellow);
+            line-height: 0.9;
+        }
+        .skin-sub {
+            font-size: 0.55rem;
+            color: #ffffff40;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+        .skin-close {
+            background: #222;
+            border: 1.5px solid #333;
+            color: #ffffff80;
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 0.75rem;
+            flex-shrink: 0;
+            transition: all 0.15s;
+        }
+        .skin-close:hover { background: var(--red); color: #fff; border-color: var(--red); }
+        .skin-section-lbl {
+            font-family: var(--font-bold);
+            font-size: 0.48rem;
+            letter-spacing: 3px;
+            color: #ffffff40;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        .skin-presets {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .skin-swatch {
+            border-radius: 10px;
+            height: 62px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.15s, border-color 0.15s;
+        }
+        .skin-swatch:hover { transform: scale(1.04); }
+        .skin-swatch.active { border-color: var(--yellow) !important; }
+        .skin-swatch-name {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(2px);
+            font-family: var(--font-bold);
+            font-size: 0.4rem;
+            letter-spacing: 2px;
+            color: #fff;
+            padding: 3px 6px;
+            text-transform: uppercase;
+        }
+        .skin-divider { height: 1.5px; background: #222; margin: 0 0 18px; }
+        .skin-upload-area {
+            background: #1a1a1a;
+            border: 2px dashed #333;
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 12px;
+            transition: border-color 0.15s;
+        }
+        .skin-upload-area:hover { border-color: var(--purple); }
+        .skin-upload-icon { font-size: 1.4rem; display: block; margin-bottom: 5px; }
+        .skin-upload-label {
+            font-family: var(--font-bold);
+            font-size: 0.52rem;
+            letter-spacing: 1.5px;
+            color: #ffffff60;
+            text-transform: uppercase;
+            display: block;
+        }
+        .skin-upload-hint-txt {
+            font-size: 0.52rem;
+            color: #ffffff30;
+            font-style: italic;
+            margin-top: 4px;
+            display: block;
+        }
+        .skin-reset-btn {
+            width: 100%;
+            padding: 10px;
+            background: #1a1a1a;
+            border: 1.5px solid #292929;
+            border-radius: 8px;
+            color: #ffffff40;
+            font-family: var(--font-bold);
+            font-size: 0.5rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-top: 4px;
+        }
+        .skin-reset-btn:hover { background: #222; color: #fff; border-color: #444; }
+
+        /* Text-shadow for readability over custom backgrounds */
+        .hero-content-shadowed .hero-title { text-shadow: 2px 2px 0 rgba(0,0,0,0.5), 0 0 20px rgba(0,0,0,0.4); }
+        .hero-content-shadowed .hero-sub { text-shadow: 1px 1px 4px rgba(0,0,0,0.7); }
+        .hero-content-shadowed .hero-tag { text-shadow: 1px 1px 3px rgba(0,0,0,0.7); }
+
+        /* ── RESPONSIVE TWEAKS ── */
+        @media (max-width: 480px) {
+            .two-col { grid-template-columns: 1fr; }
+            .hero-title { font-size: 3rem; }
+            .hero-badge { right: 16px; top: auto; bottom: 24px; }
+            .skin-panel {
+                /* Bottom sheet on mobile */
+                position: fixed;
+                bottom: 0; left: 0; right: 0;
+                width: 100% !important;
+                max-height: 80vh;
+                border-radius: 20px 20px 0 0;
+                animation: skinSheetUp 0.25s ease;
+            }
+            @keyframes skinSheetUp {
+                from { transform: translateY(30px); opacity: 0; }
+                to { transform: none; opacity: 1; }
+            }
+            /* Ensure skin modal aligns to bottom on mobile */
+            .skin-modal { align-items: flex-end; justify-content: center; padding: 0; }
+            /* Larger tap targets for nav pills on small screens */
+            .nav-pill { padding: 9px 12px; font-size: 0.54rem; }
+            .nav-exit  { padding: 9px 12px; font-size: 0.54rem; }
+            /* Drop zone tap hint */
+            .drop-title { font-size: 0.82rem; }
+            /* Progress list taller on mobile */
+            .progress-list { max-height: 240px; }
+            /* Card-drop touch feedback */
+            .card-drop:active { background: #2a2a2a; }
+            /* Forge button larger hit area */
+            .forge-btn { padding: 15px 8px; font-size: 0.7rem; }
+            /* Select size for mobile zoom prevention */
+            .card-settings select,
+            .card-gemini-header select { font-size: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- SHUTDOWN SCREEN -->
+<div id="shutdown-screen">
+    <div class="sd-title">SYSTEM<br>OFFLINE</div>
+    <div class="sd-sub">Flask server stopped successfully</div>
+    <div class="sd-hint">You can safely close this window now.</div>
+</div>
+
+<!-- SKIN STUDIO MODAL -->
+<div id="skin-modal" class="skin-modal" onclick="skinModalBackdropClick(event)">
+    <div class="skin-panel">
+        <div class="skin-header">
+            <div class="skin-header-text">
+                <div class="skin-title">SKIN<br>STUDIO</div>
+                <div class="skin-sub">// customize your interface</div>
+            </div>
+            <button class="skin-close" onclick="closeSkinPanel()">✕</button>
+        </div>
+
+        <div class="skin-section-lbl">HERO BACKGROUNDS</div>
+        <div class="skin-presets" id="skin-presets"><!-- JS rendered --></div>
+
+        <div class="skin-divider"></div>
+        <div class="skin-section-lbl">CUSTOM IMAGE</div>
+        <label for="skin-file-input" class="skin-upload-area" id="skin-upload-area">
+            <span class="skin-upload-icon">📁</span>
+            <span class="skin-upload-label">Click to Upload Image</span>
+            <span class="skin-upload-hint-txt">jpg · png · webp · stored locally</span>
+        </label>
+        <input type="file" id="skin-file-input" accept="image/*" style="display:none">
+
+        <button class="skin-reset-btn" onclick="resetSkin()">↺ Reset to Default</button>
+    </div>
+</div>
+
+<div class="app-shell">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+        <span class="topbar-brand">ONE</span>
+        <span class="topbar-stars">★ ★ ★</span>
+        <span class="topbar-ver">v2.0.0</span>
+        <button class="topbar-skin-btn" id="btn-skin" onclick="openSkinPanel()">🎨 SKIN</button>
+    </div>
+
+    <!-- HERO -->
+    <div class="hero">
+        <div class="hero-overlay"></div>
+        <div class="hero-halftone"></div>
+        <div class="hero-content">
+            <p class="hero-tag">// one app to rule them all</p>
+            <div class="hero-title">ONE<br>APP</div>
+            <p class="hero-sub">rip it · shrink it · upscale it · forge it.</p>
+        </div>
+        <div class="hero-badge">ALL-IN-ONE ★</div>
+        <!-- Animated SVG deco -->
+        <div class="hero-deco">
+            <svg class="deco-circles" viewBox="0 0 130 180" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="90" cy="140" r="80" stroke="#F5E64230" stroke-width="1.5"/>
+                <circle cx="90" cy="140" r="60" stroke="#F5E64218" stroke-width="1.5"/>
+                <circle cx="90" cy="140" r="40" stroke="#F5E64218" stroke-width="1.5"/>
+                <circle cx="90" cy="90" r="20" stroke="#F5E64235" stroke-width="2" stroke-dasharray="8 4"/>
+                <text x="70" y="95" font-family="'Bebas Neue',sans-serif" font-size="14" fill="#F5E64250" letter-spacing="1">ONE</text>
+            </svg>
+        </div>
+    </div>
+
+    <!-- NAV ROW -->
+    <div class="nav-row">
+        <button class="nav-pill active" id="pill-extract" onclick="switchPanel('extract', this)">MP3 Ripper</button>
+        <button class="nav-pill" id="pill-collect" onclick="switchPanel('collect', this)">Playlist</button>
+        <button class="nav-pill" id="pill-compress" onclick="switchPanel('compress', this)">Shrinker</button>
+        <button class="nav-pill" id="pill-expand" onclick="switchPanel('expand', this)">Upscale</button>
+        <button class="nav-pill" id="pill-gemini" onclick="switchPanel('gemini', this)">Gemini ⚡</button>
+        <button class="nav-exit" onclick="shutdownApp()">✕ Exit</button>
+    </div>
+
+    <!-- ════════════════════════════════════
+         PANEL: MP3 RIPPER
+    ════════════════════════════════════ -->
+    <div class="tool-panel active" id="panel-extract">
+        <div class="two-mini" style="margin-bottom:10px;">
+            <div class="card-mini cm-red">
+                <h3>MP3<br>RIPPER</h3>
+                <p>Rip. Convert.<br>Keep.</p>
+                <div class="pow-badge">POW!</div>
+            </div>
+            <div class="card-mini cm-yellow">
+                <h3>YT<br>AUDIO</h3>
+                <p>Paste URL.<br>Hit rip.</p>
+            </div>
+        </div>
+        <div class="card card-url" style="margin-bottom:10px;">
+            <div class="section-label dark">YouTube URL</div>
+            <input type="url" id="extract-url" placeholder="https://youtube.com/watch?v=..."
+                   autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="url">
+        </div>
+        <div class="loading-bar" id="extract-loading"><div class="loading-bar-fill"></div></div>
+        <button class="action-btn" id="btn-extract">⬇ Extract MP3</button>
+        <div class="status-badge" id="extract-status"></div>
+    </div>
+
+    <!-- ════════════════════════════════════
+         PANEL: PLAYLIST RIDER
+    ════════════════════════════════════ -->
+    <div class="tool-panel" id="panel-collect">
+        <div class="two-mini" style="margin-bottom:10px;">
+            <div class="card-mini cm-cyan">
+                <h3>PLAY<br>LIST</h3>
+                <p>M3U · Spotify<br>YouTube</p>
+            </div>
+            <div class="card-mini cm-red">
+                <h3>BATCH<br>RIDE</h3>
+                <p>Grab all<br>tracks.</p>
+                <div class="pow-badge">GO!</div>
+            </div>
+        </div>
+        <div class="card card-url" style="margin-bottom:10px;">
+            <div class="section-label dark">YouTube Playlist URL</div>
+            <input type="url" id="collect-url" placeholder="https://youtube.com/playlist?list=..."
+                   autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="url">
+        </div>
+        <div class="progress-list" id="collect-progress"></div>
+        <div class="loading-bar cyan" id="collect-loading"><div class="loading-bar-fill"></div></div>
+        <button class="card-collect-btn" id="btn-collect">▶ Collect All Tracks</button>
+        <div class="status-badge" id="collect-status"></div>
+    </div>
+
+    <!-- ════════════════════════════════════
+         PANEL: FILE SHRINKER
+    ════════════════════════════════════ -->
+    <div class="tool-panel" id="panel-compress">
+        <!-- Drop Zone -->
+        <div class="card card-drop" id="compress-drop" style="margin-bottom:10px;">
+            <div class="drop-dots"></div>
+            <div class="drop-inner">
+                <div class="speech-bubble">Drop your file here, baby!</div>
+                <span class="drop-arrow">↓</span>
+                <div class="drop-title">Drag &amp; Drop or Tap to Browse</div>
+                <div class="drop-sub">any file type · max 500mb</div>
+                <div class="drop-filename" id="compress-filename"></div>
+            </div>
+            <input type="file" id="compress-file" class="file-input">
+        </div>
+        <!-- Slider -->
+        <div class="card card-slider">
+            <div class="slider-row">
+                <span class="slider-label">Target Size</span>
+                <span class="slider-val" id="compress-val">1000 KB</span>
+            </div>
+            <input type="range" id="compress-target" min="10" max="10000" value="1000">
+        </div>
+        <div style="height:10px;"></div>
+        <div class="loading-bar" id="compress-loading"><div class="loading-bar-fill"></div></div>
+        <button class="action-btn" id="btn-compress">⚙ Compress File</button>
+        <div class="status-badge" id="compress-status"></div>
+    </div>
+
+    <!-- ════════════════════════════════════
+         PANEL: LOCAL UPSCALE
+    ════════════════════════════════════ -->
+    <div class="tool-panel" id="panel-expand">
+        <!-- Drop Zone -->
+        <div class="card card-drop" id="expand-drop" style="margin-bottom:10px;">
+            <div class="drop-dots"></div>
+            <div class="drop-inner">
+                <div class="speech-bubble">Drop your image here!</div>
+                <span class="drop-arrow">↓</span>
+                <div class="drop-title">Drag &amp; Drop or Tap to Browse</div>
+                <div class="drop-sub">jpg · png · webp · max 50mb</div>
+                <div class="drop-filename" id="expand-filename"></div>
+            </div>
+            <input type="file" id="expand-file" class="file-input" accept="image/*">
+        </div>
+        <!-- Settings + Forge -->
+        <div class="two-col">
+            <div class="card card-settings">
+                <div class="settings-stripes"></div>
+                <div class="section-label">Format</div>
+                <select id="expand-format">
+                    <option value="Poster">Poster (A4)</option>
+                    <option value="A5">A5 Print</option>
+                    <option value="Wallpaper">Wallpaper (16:9)</option>
+                </select>
+                <div class="section-label">Orientation</div>
+                <select id="expand-orientation">
+                    <option value="portrait">Portrait</option>
+                    <option value="landscape">Landscape</option>
+                </select>
+                <div class="check-row">
+                    <label class="check-item">
+                        <input type="checkbox" id="expand-ai-enhance" checked>
+                        <span>AI Enhance (FSRCNN)</span>
+                    </label>
+                    <label class="check-item">
+                        <input type="checkbox" id="expand-gemini-guide" checked>
+                        <span>Gemini Suggestions</span>
+                    </label>
+                </div>
+            </div>
+            <div class="card card-forge">
+                <div class="diagonal-stripe"></div>
+                <div>
+                    <div class="out-label">Output Resolution</div>
+                    <div class="out-val" id="expand-out-val">2480 × 3508 PX</div>
+                    <div class="out-label" style="margin-top:6px;" id="expand-out-type">Print-ready ✓</div>
+                </div>
+                <div class="loading-bar" id="expand-loading" style="margin-bottom:0; margin-top:10px;"><div class="loading-bar-fill"></div></div>
+                <button class="forge-btn" id="btn-expand">⚡ Expand to Poster</button>
+            </div>
+        </div>
+        <div class="status-badge" id="expand-status"></div>
+    </div>
+
+    <!-- ════════════════════════════════════
+         PANEL: GEMINI POWERUP
+    ════════════════════════════════════ -->
+    <div class="tool-panel" id="panel-gemini">
+        <!-- Type selector card -->
+        <div class="card-gemini-header">
+            <div class="settings-stripes"></div>
+            <div class="gemini-type-label">Upgrade Type</div>
+            <select id="gemini-enhance-type">
+                <option value="image_upscale">Creative Upscale (Imagen 3 4K)</option>
+                <option value="image_svg">Vector Upgrade (Logo/Drawing → SVG)</option>
+                <option value="document_cleanup">Doc Reconstruct (OCR, Clean PDFs/Scans)</option>
+                <option value="audio_tagging">MP3 Retail Tagging (Artwork &amp; Meta Tags)</option>
+            </select>
+            <div class="gemini-type-info" id="gemini-info">Select a type to see details.</div>
+        </div>
+        <!-- Drop Zone -->
+        <div class="card card-drop" id="gemini-drop" style="margin-bottom:10px;">
+            <div class="drop-dots"></div>
+            <div class="drop-inner">
+                <div class="speech-bubble" id="gemini-bubble">Drop your file here!</div>
+                <span class="drop-arrow">↓</span>
+                <div class="drop-title">Drag &amp; Drop or Tap to Browse</div>
+                <div class="drop-sub" id="gemini-accept-hint">image files</div>
+                <div class="drop-filename" id="gemini-filename"></div>
+            </div>
+            <input type="file" id="gemini-file" class="file-input">
+        </div>
+        <div class="loading-bar purple" id="gemini-loading"><div class="loading-bar-fill"></div></div>
+        <button class="gemini-btn" id="btn-gemini">⚡ Upgrade File</button>
+        <div class="status-badge" id="gemini-status"></div>
+    </div>
+
+</div><!-- /app-shell -->
+
+<script>
+    /* ── DYNAMIC BACKGROUND ── */
+    function setPageBackground(file) {
+        if (!file || !file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            const bgUrl = e.target.result;
+            document.body.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('${bgUrl}')`;
+            document.body.style.backgroundSize = 'cover';
+            document.body.style.backgroundPosition = 'center';
+            /* Use scroll instead of fixed — iOS Safari does not support fixed on body */
+            document.body.style.backgroundAttachment = 'scroll';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    /* ── PANEL SWITCHER ── */
+    function switchPanel(id, btn) {
+        document.querySelectorAll('.tool-panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-pill').forEach(b => b.classList.remove('active'));
+        document.getElementById('panel-' + id).classList.add('active');
+        btn.classList.add('active');
+    }
+
+    /* ── STATUS HELPERS ── */
+    function showStatus(id, text, isErr = false) {
+        const el = document.getElementById(id);
+        el.textContent = (isErr ? '✕ ' : '✓ ') + text;
+        el.className = 'status-badge show ' + (isErr ? 'err' : 'ok');
+    }
+    function hideStatus(id) {
+        const el = document.getElementById(id);
+        el.className = 'status-badge';
+    }
+    function showLoader(id) { document.getElementById(id).style.display = 'block'; }
+    function hideLoader(id) { document.getElementById(id).style.display = 'none'; }
+
+    /* ── DOWNLOAD (fixed: anchor-click via /api/download endpoint) ── */
+    function triggerDownload(serverFilename) {
+        const a = document.createElement('a');
+        a.href = '/api/download?file=' + encodeURIComponent(serverFilename);
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { try { document.body.removeChild(a); } catch(e) {} }, 2000);
+    }
+
+    /* ── SHUTDOWN ── */
+    function shutdownApp() {
+        if (!confirm('Exit and shut down the application?')) return;
+        document.getElementById('shutdown-screen').classList.add('show');
+        fetch('/api/shutdown', { method: 'POST' })
+            .finally(() => setTimeout(() => window.close(), 1500));
+    }
+
+    /* ══════════════════════════════════════
+       EXTRACT (MP3 Ripper)
+    ══════════════════════════════════════ */
+    document.getElementById('btn-extract').addEventListener('click', async () => {
+        const url = document.getElementById('extract-url').value.trim();
+        if (!url) { showStatus('extract-status', 'Please paste a YouTube URL', true); return; }
+        const btn = document.getElementById('btn-extract');
+        btn.disabled = true;
+        showLoader('extract-loading');
+        hideStatus('extract-status');
+        try {
+            const res = await fetch('/api/download-mp3', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                triggerDownload(data.filename);
+                showStatus('extract-status', 'Extraction Complete — download started!');
+            } else {
+                showStatus('extract-status', data.error || 'Unknown error', true);
+            }
+        } catch (err) {
+            showStatus('extract-status', 'Network Error', true);
+        }
+        btn.disabled = false;
+        hideLoader('extract-loading');
+    });
+
+    /* ══════════════════════════════════════
+       COLLECT (Playlist Rider)
+    ══════════════════════════════════════ */
+    let eventSource = null;
+    document.getElementById('btn-collect').addEventListener('click', async () => {
+        const url = document.getElementById('collect-url').value.trim();
+        if (!url) { showStatus('collect-status', 'Please paste a playlist URL', true); return; }
+        const btn = document.getElementById('btn-collect');
+        const progressList = document.getElementById('collect-progress');
+        btn.disabled = true;
+        progressList.innerHTML = '';
+        progressList.classList.add('show');
+        showLoader('collect-loading');
+        hideStatus('collect-status');
+        try {
+            const res = await fetch('/api/start-playlist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url })
+            });
+            if (!res.ok) throw new Error('Failed to start');
+            const { task_id } = await res.json();
+            if (eventSource) eventSource.close();
+            eventSource = new EventSource(`/api/playlist-progress/${task_id}`);
+            eventSource.onmessage = function(e) {
+                if (e.data.startsWith('DONE|')) {
+                    const task_id = e.data.split('|')[1];
+                    eventSource.close();
+                    /* Navigate to mobile-friendly file browser instead of auto-downloading a ZIP.
+                       On phone, the file browser lets users download individual MP3s directly. */
+                    showStatus('collect-status', 'Done! Opening your tracks…');
+                    setTimeout(() => { window.location.href = '/playlist-files/' + task_id; }, 800);
+                    btn.disabled = false;
+                    hideLoader('collect-loading');
+                } else if (e.data.startsWith('ERROR|')) {
+                    eventSource.close();
+                    showStatus('collect-status', e.data.split('|')[1], true);
+                    btn.disabled = false;
+                    hideLoader('collect-loading');
+                } else {
+                    const div = document.createElement('div');
+                    div.className = 'progress-item';
+                    div.textContent = '✓ ' + e.data;
+                    progressList.prepend(div);
+                    progressList.scrollTop = 0;
+                }
+            };
+            eventSource.onerror = function() {
+                eventSource.close();
+                showStatus('collect-status', 'Connection lost', true);
+                btn.disabled = false;
+                hideLoader('collect-loading');
+            };
+        } catch (err) {
+            showStatus('collect-status', 'Network Error', true);
+            btn.disabled = false;
+            hideLoader('collect-loading');
+        }
+    });
+
+    /* ══════════════════════════════════════
+       COMPRESS (File Shrinker)
+    ══════════════════════════════════════ */
+    const compressDrop = document.getElementById('compress-drop');
+    const compressFile = document.getElementById('compress-file');
+
+    compressDrop.addEventListener('click', () => compressFile.click());
+    compressDrop.addEventListener('dragover', e => { e.preventDefault(); compressDrop.classList.add('dragover'); });
+    compressDrop.addEventListener('dragleave', () => compressDrop.classList.remove('dragover'));
+    compressDrop.addEventListener('drop', e => {
+        e.preventDefault();
+        compressDrop.classList.remove('dragover');
+        if (e.dataTransfer.files.length) setCompressFile(e.dataTransfer.files[0]);
+    });
+    compressFile.addEventListener('change', () => { if (compressFile.files.length) setCompressFile(compressFile.files[0]); });
+
+    function setCompressFile(file) {
+        // Manually assign to the hidden input
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        compressFile.files = dt.files;
+        document.getElementById('compress-filename').textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+        setPageBackground(file);
+    }
+
+    const compressTarget = document.getElementById('compress-target');
+    const compressVal = document.getElementById('compress-val');
+    compressTarget.addEventListener('input', () => { compressVal.textContent = compressTarget.value + ' KB'; });
+
+    document.getElementById('btn-compress').addEventListener('click', async () => {
+        if (!compressFile.files.length) { showStatus('compress-status', 'Please select a file first', true); return; }
+        const btn = document.getElementById('btn-compress');
+        btn.disabled = true;
+        showLoader('compress-loading');
+        hideStatus('compress-status');
+        const formData = new FormData();
+        formData.append('file', compressFile.files[0]);
+        formData.append('target_kb', compressTarget.value);
+        try {
+            const res = await fetch('/api/compress', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (res.ok) {
+                triggerDownload(data.filename);
+                showStatus('compress-status', 'Compression Complete — download started!');
+            } else {
+                showStatus('compress-status', data.error || 'Unknown error', true);
+            }
+        } catch (err) {
+            showStatus('compress-status', 'Network Error', true);
+        }
+        btn.disabled = false;
+        hideLoader('compress-loading');
+    });
+
+    /* ══════════════════════════════════════
+       EXPAND (Local Upscale)
+    ══════════════════════════════════════ */
+    const expandDrop = document.getElementById('expand-drop');
+    const expandFile = document.getElementById('expand-file');
+
+    expandDrop.addEventListener('click', () => expandFile.click());
+    expandDrop.addEventListener('dragover', e => { e.preventDefault(); expandDrop.classList.add('dragover'); });
+    expandDrop.addEventListener('dragleave', () => expandDrop.classList.remove('dragover'));
+    expandDrop.addEventListener('drop', e => {
+        e.preventDefault();
+        expandDrop.classList.remove('dragover');
+        if (e.dataTransfer.files.length) handleExpandFile(e.dataTransfer.files[0]);
+    });
+    expandFile.addEventListener('change', () => { if (expandFile.files.length) handleExpandFile(expandFile.files[0]); });
+
+    function handleExpandFile(file) {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        expandFile.files = dt.files;
+        document.getElementById('expand-filename').textContent = file.name;
+        setPageBackground(file);
+        // Show preview thumb
+        let img = document.getElementById('expand-thumb');
+        if (!img) {
+            img = document.createElement('img');
+            img.id = 'expand-thumb'; img.className = 'preview-thumb';
+            expandDrop.querySelector('.drop-inner').appendChild(img);
+        }
+        const reader = new FileReader();
+        reader.onload = e => { img.src = e.target.result; };
+        reader.readAsDataURL(file);
+    }
+
+    function updateExpandInfo() {
+        const fmt = document.getElementById('expand-format').value;
+        const ori = document.getElementById('expand-orientation').value;
+        let w, h;
+        if (fmt === 'Poster') { w = ori==='portrait'?2480:3508; h = ori==='portrait'?3508:2480; }
+        else if (fmt === 'A5') { w = ori==='portrait'?1748:2480; h = ori==='portrait'?2480:1748; }
+        else { w = ori==='portrait'?2160:3840; h = ori==='portrait'?3840:2160; }
+        const typeText = fmt === 'Wallpaper' ? '4K Resolution' : 'Print-ready ✓';
+        document.getElementById('expand-out-val').textContent = w + ' × ' + h + ' PX';
+        document.getElementById('expand-out-type').textContent = typeText;
+    }
+    document.getElementById('expand-format').addEventListener('change', updateExpandInfo);
+    document.getElementById('expand-orientation').addEventListener('change', updateExpandInfo);
+
+    const expandAi = document.getElementById('expand-ai-enhance');
+    const expandGem = document.getElementById('expand-gemini-guide');
+    expandAi.addEventListener('change', () => {
+        expandGem.disabled = !expandAi.checked;
+        if (!expandAi.checked) expandGem.checked = false;
+    });
+
+    document.getElementById('btn-expand').addEventListener('click', async () => {
+        if (!expandFile.files.length) { showStatus('expand-status', 'Please drop an image first', true); return; }
+        const btn = document.getElementById('btn-expand');
+        btn.disabled = true;
+        showLoader('expand-loading');
+        hideStatus('expand-status');
+        const formData = new FormData();
+        formData.append('file', expandFile.files[0]);
+        formData.append('format', document.getElementById('expand-format').value);
+        formData.append('orientation', document.getElementById('expand-orientation').value);
+        formData.append('ai_enhance', expandAi.checked ? 'true' : 'false');
+        formData.append('gemini_guide', expandGem.checked ? 'true' : 'false');
+        try {
+            const res = await fetch('/api/upscale', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (res.ok) {
+                triggerDownload(data.filename);
+                showStatus('expand-status', 'Expansion Complete — download started!');
+            } else {
+                showStatus('expand-status', data.error || 'Unknown error', true);
+            }
+        } catch (err) {
+            showStatus('expand-status', 'Network Error', true);
+        }
+        btn.disabled = false;
+        hideLoader('expand-loading');
+    });
+
+    /* ══════════════════════════════════════
+       GEMINI POWERUP
+    ══════════════════════════════════════ */
+    const geminiType = document.getElementById('gemini-enhance-type');
+    const geminiDrop = document.getElementById('gemini-drop');
+    const geminiFile = document.getElementById('gemini-file');
+
+    const geminiDescriptions = {
+        'image_upscale': 'Generates a descriptive prompt using Gemini and recreates your image in high-definition using Imagen 3. Note: Creative Upscale generates a new image and may alter fine details.',
+        'image_svg':     'Analyzes your drawing or logo and writes clean, scalable, high-quality vector SVG code.',
+        'document_cleanup': 'Extracts content from scanned PDFs or images, corrects layout & grammar, outputs a formatted HTML page.',
+        'audio_tagging': 'Analyzes metadata from the filename, generates custom cover art with Imagen, and embeds both into the MP3.'
+    };
+    const geminiAccept = {
+        'image_upscale': 'image/*',
+        'image_svg':     'image/*',
+        'document_cleanup': 'application/pdf,image/*',
+        'audio_tagging': '.mp3'
+    };
+    const geminiHints = {
+        'image_upscale': 'image files (jpg, png, webp)',
+        'image_svg':     'image files (jpg, png, gif)',
+        'document_cleanup': 'PDF or image files',
+        'audio_tagging': 'MP3 files only'
+    };
+
+    function updateGeminiType() {
+        const val = geminiType.value;
+        document.getElementById('gemini-info').textContent = geminiDescriptions[val] || '';
+        document.getElementById('gemini-accept-hint').textContent = geminiHints[val] || 'any file';
+        geminiFile.accept = geminiAccept[val] || '';
+        geminiFile.value = '';
+        document.getElementById('gemini-filename').textContent = '';
+        const img = document.getElementById('gemini-thumb');
+        if (img) img.remove();
+    }
+    geminiType.addEventListener('change', updateGeminiType);
+    updateGeminiType();
+
+    geminiDrop.addEventListener('click', () => geminiFile.click());
+    geminiDrop.addEventListener('dragover', e => { e.preventDefault(); geminiDrop.classList.add('dragover'); });
+    geminiDrop.addEventListener('dragleave', () => geminiDrop.classList.remove('dragover'));
+    geminiDrop.addEventListener('drop', e => {
+        e.preventDefault();
+        geminiDrop.classList.remove('dragover');
+        if (e.dataTransfer.files.length) handleGeminiFile(e.dataTransfer.files[0]);
+    });
+    geminiFile.addEventListener('change', () => { if (geminiFile.files.length) handleGeminiFile(geminiFile.files[0]); });
+
+    function handleGeminiFile(file) {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        geminiFile.files = dt.files;
+        document.getElementById('gemini-filename').textContent = file.name + ' (' + (file.size/1024).toFixed(1) + ' KB)';
+        setPageBackground(file);
+        const old = document.getElementById('gemini-thumb');
+        if (old) old.remove();
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const img = document.createElement('img');
+                img.id = 'gemini-thumb'; img.className = 'preview-thumb';
+                img.src = e.target.result;
+                geminiDrop.querySelector('.drop-inner').appendChild(img);
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    document.getElementById('btn-gemini').addEventListener('click', async () => {
+        if (!geminiFile.files.length) { showStatus('gemini-status', 'Please drop a file first', true); return; }
+        const btn = document.getElementById('btn-gemini');
+        btn.disabled = true;
+        showLoader('gemini-loading');
+        hideStatus('gemini-status');
+        const formData = new FormData();
+        formData.append('file', geminiFile.files[0]);
+        formData.append('type', geminiType.value);
+        try {
+            const res = await fetch('/api/gemini-enhance', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (res.ok) {
+                triggerDownload(data.filename);
+                showStatus('gemini-status', 'Upgrade Complete — download started!');
+            } else {
+                showStatus('gemini-status', data.error || 'Unknown error', true);
+            }
+        } catch (err) {
+            showStatus('gemini-status', 'Network Error', true);
+        }
+        btn.disabled = false;
+        hideLoader('gemini-loading');
+    });
+
+    /* ══════════════════════════════════════
+       SKIN STUDIO
+    ══════════════════════════════════════ */
+    const SKIN_KEY = 'one_app_skin_v1';
+
+    const SKIN_PRESETS = [
+        {
+            id: 'default', name: 'DEFAULT',
+            bg: '#E8323A',
+            overlay: 'linear-gradient(120deg,#E8323Aee 40%,transparent 100%)',
+            titleColor: '#F5E642', subColor: '#ffffffcc', tagColor: '#F5E64290',
+            titleStroke: '1.5px #111', shadowed: false
+        },
+        {
+            id: 'cbrpnk', name: 'CBRPNK',
+            bg: 'linear-gradient(135deg,#070e22 0%,#0c1935 100%)',
+            bgImg: 'repeating-linear-gradient(0deg,rgba(255,255,255,0.04) 0,rgba(255,255,255,0.04) 1px,transparent 1px,transparent 22px),repeating-linear-gradient(90deg,rgba(255,255,255,0.04) 0,rgba(255,255,255,0.04) 1px,transparent 1px,transparent 22px)',
+            overlay: 'transparent',
+            titleColor: '#F5E642', subColor: '#ffffffaa', tagColor: '#F5E64260',
+            titleStroke: '1.5px #000', shadowed: false
+        },
+        {
+            id: 'wave', name: 'WAVE',
+            bg: 'linear-gradient(160deg,#b82200 0%,#e83600 55%,#ff5500 100%)',
+            overlay: 'transparent',
+            titleColor: '#ffffff', subColor: '#ffffff99', tagColor: '#ffffff55',
+            titleStroke: '1.5px #660000', shadowed: false
+        },
+        {
+            id: 'lab', name: 'LAB',
+            bg: 'linear-gradient(125deg,#d5c4a2 0%,#e2d2b2 100%)',
+            overlay: 'transparent',
+            titleColor: '#1a1a1a', subColor: '#33333399', tagColor: '#55555560',
+            titleStroke: '1.5px rgba(120,90,50,0.3)', shadowed: false
+        },
+        {
+            id: 'scope', name: 'SCOPE',
+            bg: 'linear-gradient(135deg,#161616 0%,#262626 100%)',
+            bgImg: 'radial-gradient(circle at 70% 50%,rgba(0,212,232,0.10) 0%,transparent 60%)',
+            overlay: 'transparent',
+            titleColor: '#00D4E8', subColor: '#ffffffaa', tagColor: '#00D4E860',
+            titleStroke: '1.5px #003340', shadowed: false
+        },
+        {
+            id: 'neon', name: 'NEON',
+            bg: 'linear-gradient(135deg,#0b0020 0%,#1a0040 60%,#200050 100%)',
+            bgImg: 'repeating-linear-gradient(-45deg,rgba(255,0,255,0.04) 0,rgba(255,0,255,0.04) 1px,transparent 1px,transparent 20px)',
+            overlay: 'transparent',
+            titleColor: '#ff44ff', subColor: '#ff99ffaa', tagColor: '#ff44ff55',
+            titleStroke: '1.5px #400040', shadowed: false
+        },
+        {
+            id: 'jungle', name: 'JUNGLE',
+            bg: 'linear-gradient(135deg,#071500 0%,#0e2800 60%,#153800 100%)',
+            overlay: 'transparent',
+            titleColor: '#ccff00', subColor: '#ffffffaa', tagColor: '#ccff0055',
+            titleStroke: '1.5px #002200', shadowed: false
+        },
+        {
+            id: 'chrome', name: 'CHROME',
+            bg: 'linear-gradient(170deg,#b0b0b0 0%,#686868 45%,#909090 100%)',
+            overlay: 'transparent',
+            titleColor: '#111', subColor: '#22222299', tagColor: '#11111150',
+            titleStroke: '1.5px rgba(255,255,255,0.3)', shadowed: false
+        }
+    ];
+
+    function getSkin() {
+        try { return JSON.parse(localStorage.getItem(SKIN_KEY) || '{"presetId":"default","type":"preset"}'); }
+        catch(e) { return { presetId: 'default', type: 'preset' }; }
+    }
+
+    function saveSkin(skin) {
+        try { localStorage.setItem(SKIN_KEY, JSON.stringify(skin)); } catch(e) {}
+    }
+
+    function openSkinPanel() {
+        renderSkinPresets();
+        document.getElementById('skin-modal').classList.add('open');
+    }
+
+    function closeSkinPanel() {
+        document.getElementById('skin-modal').classList.remove('open');
+    }
+
+    function skinModalBackdropClick(e) {
+        if (e.target === document.getElementById('skin-modal')) closeSkinPanel();
+    }
+
+    function renderSkinPresets() {
+        const saved = getSkin();
+        const container = document.getElementById('skin-presets');
+        container.innerHTML = '';
+        SKIN_PRESETS.forEach(p => {
+            const swatch = document.createElement('div');
+            swatch.className = 'skin-swatch' + (saved.presetId === p.id && saved.type === 'preset' ? ' active' : '');
+            swatch.style.background = p.bg;
+            if (p.bgImg) swatch.style.backgroundImage = p.bgImg;
+            swatch.dataset.id = p.id;
+            swatch.onclick = () => selectSkinPreset(p.id);
+            const lbl = document.createElement('div');
+            lbl.className = 'skin-swatch-name';
+            lbl.textContent = p.name;
+            swatch.appendChild(lbl);
+            container.appendChild(swatch);
+        });
+        // Add a "CUSTOM" swatch if user has a custom bg
+        if (saved.type === 'custom' && saved.customBg) {
+            const swatch = document.createElement('div');
+            swatch.className = 'skin-swatch active';
+            swatch.style.backgroundImage = `url(${saved.customBg})`;
+            swatch.style.backgroundSize = 'cover';
+            swatch.style.backgroundPosition = 'center';
+            swatch.onclick = () => {};
+            const lbl = document.createElement('div');
+            lbl.className = 'skin-swatch-name';
+            lbl.textContent = 'CUSTOM ✓';
+            swatch.appendChild(lbl);
+            container.appendChild(swatch);
+        }
+    }
+
+    function selectSkinPreset(presetId) {
+        const skin = { presetId, type: 'preset' };
+        saveSkin(skin);
+        const preset = SKIN_PRESETS.find(p => p.id === presetId) || SKIN_PRESETS[0];
+        applySkinToHero(preset, null);
+        // Update active swatches
+        document.querySelectorAll('.skin-swatch').forEach(s => {
+            s.classList.toggle('active', s.dataset.id === presetId);
+        });
+    }
+
+    function applySkinToHero(preset, customBgUrl) {
+        const hero = document.querySelector('.hero');
+        if (!hero) return;
+        const heroContent = hero.querySelector('.hero-content');
+        const titleEl = hero.querySelector('.hero-title');
+        const subEl = hero.querySelector('.hero-sub');
+        const tagEl = hero.querySelector('.hero-tag');
+        const overlayEl = hero.querySelector('.hero-overlay');
+
+        if (customBgUrl) {
+            // Custom image: clear inline bg, set via backgroundImage
+            hero.style.cssText = '';
+            hero.style.backgroundImage = `url(${customBgUrl})`;
+            hero.style.backgroundSize = 'cover';
+            hero.style.backgroundPosition = 'center';
+            // Dark gradient overlay for readability
+            if (overlayEl) overlayEl.style.background = 'linear-gradient(120deg,rgba(0,0,0,0.65) 35%,rgba(0,0,0,0.15) 100%)';
+            // Text colours with shadows for readability
+            if (titleEl) { titleEl.style.color = '#F5E642'; titleEl.style.webkitTextStroke = '1.5px rgba(0,0,0,0.7)'; }
+            if (subEl)   { subEl.style.color = 'rgba(255,255,255,0.92)'; }
+            if (tagEl)   { tagEl.style.color = 'rgba(245,230,66,0.75)'; }
+            if (heroContent) heroContent.classList.add('hero-content-shadowed');
+        } else if (preset) {
+            hero.style.cssText = '';
+            hero.style.background = preset.bg;
+            if (preset.bgImg) hero.style.backgroundImage = preset.bgImg;
+            if (overlayEl) overlayEl.style.background = preset.overlay;
+            if (titleEl) { titleEl.style.color = preset.titleColor; titleEl.style.webkitTextStroke = preset.titleStroke; }
+            if (subEl) subEl.style.color = preset.subColor;
+            if (tagEl) tagEl.style.color = preset.tagColor;
+            if (heroContent) heroContent.classList.remove('hero-content-shadowed');
+        }
+    }
+
+    function resetSkin() {
+        saveSkin({ presetId: 'default', type: 'preset' });
+        applySkinToHero(SKIN_PRESETS[0], null);
+        renderSkinPresets();
+    }
+
+    // Custom image upload handler
+    document.getElementById('skin-file-input').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            const img = new Image();
+            img.onload = function() {
+                // Downscale to max 900px wide to stay under localStorage 5MB limit
+                const MAX_W = 900;
+                const ratio = img.width > MAX_W ? MAX_W / img.width : 1;
+                const canvas = document.createElement('canvas');
+                canvas.width  = Math.round(img.width  * ratio);
+                canvas.height = Math.round(img.height * ratio);
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+                const skin = { presetId: 'custom', type: 'custom', customBg: dataUrl };
+                saveSkin(skin);
+                applySkinToHero(null, dataUrl);
+                renderSkinPresets();
+            };
+            img.src = evt.target.result;
+        };
+        reader.readAsDataURL(file);
+        // Reset input so the same file can be re-selected if needed
+        this.value = '';
+    });
+
+    // Auto-apply saved skin on page load
+    (function initSkin() {
+        const skin = getSkin();
+        if (skin.type === 'custom' && skin.customBg) {
+            applySkinToHero(null, skin.customBg);
+        } else if (skin.presetId && skin.presetId !== 'default') {
+            const preset = SKIN_PRESETS.find(p => p.id === skin.presetId);
+            if (preset) applySkinToHero(preset, null);
+        }
+    })();
+
+    /* ── MOBILE: LOCAL NETWORK SHARE HINT ── */
+    /* Injects a 📱 SHARE button in the topbar so the user can easily
+       copy/share the local URL to open ONE App on their phone. */
+    (function showNetworkHint() {
+        const ver = document.querySelector('.topbar-ver');
+        if (!ver) return;
+        const pill = document.createElement('button');
+        pill.style.cssText = [
+            'background:#1c1c1c',
+            'border:1.5px solid #333',
+            'color:#ffffff60',
+            'font-family:var(--font-bold)',
+            'font-size:0.48rem',
+            'letter-spacing:2px',
+            'text-transform:uppercase',
+            'padding:5px 10px',
+            'border-radius:999px',
+            'cursor:pointer',
+            'margin-left:6px',
+            'touch-action:manipulation',
+            '-webkit-tap-highlight-color:transparent'
+        ].join(';');
+        pill.textContent = '\uD83D\uDCF1 SHARE';
+        pill.title = 'Open on your phone';
+        pill.setAttribute('id', 'btn-share-phone');
+        pill.onclick = function() {
+            const host = window.location.hostname;
+            const port = window.location.port;
+            const url  = 'http://' + host + (port && port !== '80' ? ':' + port : '') + '/';
+            if (navigator.share) {
+                navigator.share({ title: 'ONE App', url: url }).catch(function() {});
+            } else {
+                prompt('Copy this URL and open it on your phone (same Wi-Fi required):', url);
+            }
+        };
+        ver.after(pill);
+    })();
+
+    /* ── MOBILE: DETECT TOUCH AND UPDATE LABELS ── */
+    (function initTouchDetect() {
+        const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        if (isTouch) {
+            document.querySelectorAll('.drop-title').forEach(el => {
+                el.textContent = 'TAP TO BROWSE';
+            });
+            const compressBubble = document.querySelector('#compress-drop .speech-bubble');
+            if (compressBubble) compressBubble.textContent = 'Tap to select your file, baby!';
+            const expandBubble = document.querySelector('#expand-drop .speech-bubble');
+            if (expandBubble) expandBubble.textContent = 'Tap to select image!';
+            const geminiBubble = document.getElementById('gemini-bubble');
+            if (geminiBubble) geminiBubble.textContent = 'Tap to select your file!';
+        }
+    })();
+
+</script>
+</body>
+</html>

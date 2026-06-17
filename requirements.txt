@@ -1,0 +1,10 @@
+flask
+yt-dlp
+pillow
+pymupdf
+opencv-contrib-python
+requests
+google-genai
+python-dotenv
+mutagen
+gunicorn
