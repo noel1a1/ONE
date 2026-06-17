@@ -1420,11 +1420,6 @@
     document.getElementById('expand-orientation').addEventListener('change', updateExpandInfo);
 
     const expandAi = document.getElementById('expand-ai-enhance');
-    const expandGem = document.getElementById('expand-gemini-guide');
-    expandAi.addEventListener('change', () => {
-        expandGem.disabled = !expandAi.checked;
-        if (!expandAi.checked) expandGem.checked = false;
-    });
 
     document.getElementById('btn-expand').addEventListener('click', async () => {
         if (!expandFile.files.length) { showStatus('expand-status', 'Please drop an image first', true); return; }
@@ -1437,7 +1432,6 @@
         formData.append('format', document.getElementById('expand-format').value);
         formData.append('orientation', document.getElementById('expand-orientation').value);
         formData.append('ai_enhance', expandAi.checked ? 'true' : 'false');
-        formData.append('gemini_guide', expandGem.checked ? 'true' : 'false');
         try {
             const res = await fetch('/api/upscale', { method: 'POST', body: formData });
             const data = await res.json();

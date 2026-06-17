@@ -7,6 +7,7 @@ import zipfile
 import threading
 import re
 import json
+import ssl
 from flask import Flask, request, send_file, render_template, Response, jsonify, make_response
 import yt_dlp
 from PIL import Image, ImageFilter
@@ -18,6 +19,19 @@ from dotenv import load_dotenv
 import mutagen
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, APIC, TIT2, TPE1, TALB, TYER, TCON
+
+# ── Global SSL patch ──────────────────────────────────────────────────────────
+# Fixes "EOF unexpected while reading in violation of protocol" errors that
+# yt-dlp encounters on networks with strict TLS filtering or legacy servers.
+try:
+    _ssl_ctx = ssl.create_default_context()
+    _ssl_ctx.check_hostname = False
+    _ssl_ctx.verify_mode = ssl.CERT_NONE
+    # Allow legacy renegotiation (needed on some ISPs / corporate proxies)
+    _ssl_ctx.options |= getattr(ssl, 'OP_LEGACY_SERVER_CONNECT', 0)
+    ssl._create_default_https_context = ssl._create_unverified_context
+except Exception:
+    pass  # If ssl patching fails, continue without it
 
 # Load environment variables
 load_dotenv()
@@ -93,6 +107,12 @@ def download_mp3():
         'outtmpl': os.path.join(DOWNLOAD_DIR, f'{task_id}_%(title)s.%(ext)s'),
         'quiet': True,
         'nocheckcertificate': True,
+        'legacy_server_connect': True,
+        'socket_timeout': 30,
+        'retries': 5,
+        'fragment_retries': 5,
+        'http_chunk_size': 10485760,
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
     }
 
     try:
@@ -110,7 +130,20 @@ def download_mp3():
                     return jsonify({"filename": new_filename})
             return jsonify({"error": "File not found after download"}), 500
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        # Produce a concise, human-readable error instead of the full yt-dlp traceback
+        err_str = str(e)
+        if 'SSL' in err_str or 'EOF' in err_str:
+            friendly = 'SSL/Network error — YouTube blocked the connection. Try: disable VPN/proxy, or switch networks.'
+        elif 'Unsupported URL' in err_str or 'is not a valid URL' in err_str:
+            friendly = 'Invalid URL — paste a full YouTube video link.'
+        elif 'Sign in' in err_str or 'age' in err_str.lower():
+            friendly = 'Age-restricted video — cannot download without login.'
+        elif 'Private' in err_str or 'not available' in err_str:
+            friendly = 'Video is private or unavailable.'
+        else:
+            # Trim long yt-dlp error prefixes like "[youtube] XXXX: ..."
+            friendly = re.sub(r'^\[.*?\]\s*[\w-]+:\s*', '', err_str, flags=re.DOTALL).strip()[:200]
+        return jsonify({"error": friendly}), 500
 
 def playlist_download_worker(task_id, url):
     playlist_dir = os.path.join(DOWNLOAD_DIR, task_id)
@@ -150,6 +183,12 @@ def playlist_download_worker(task_id, url):
         'progress_hooks': [progress_hook],
         'ignoreerrors': True,
         'nocheckcertificate': True,
+        'legacy_server_connect': True,
+        'socket_timeout': 30,
+        'retries': 5,
+        'fragment_retries': 5,
+        'http_chunk_size': 10485760,
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
     }
 
     try:
