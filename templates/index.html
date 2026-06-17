@@ -963,6 +963,36 @@
     </div>
 </div>
 
+<!-- COOKIES MODAL -->
+<div id="cookies-modal" class="skin-modal" onclick="cookiesModalBackdropClick(event)">
+    <div class="skin-panel" style="width: 400px; max-width: 90vw;">
+        <div class="skin-header">
+            <div class="skin-header-text">
+                <div class="skin-title">YOUTUBE<br>COOKIES</div>
+                <div class="skin-sub">// bypass bot detection</div>
+            </div>
+            <button class="skin-close" onclick="closeCookiesPanel()">✕</button>
+        </div>
+
+        <div class="skin-section-lbl" style="margin-bottom: 6px;">NETSCAPE COOKIES.TXT CONTENT</div>
+        <div style="font-size: 0.65rem; color: #ffffff70; line-height: 1.4; margin-bottom: 12px; font-style: italic; text-transform: uppercase; letter-spacing: 0.5px;">
+            Export cookies from your browser using extensions like <b>Get cookies.txt LOCALLY</b> (Chrome/Firefox) and paste the contents below.
+        </div>
+        
+        <textarea id="cookies-text" placeholder="# Netscape HTTP Cookie File&#10;.youtube.com&#10;..." 
+                  style="width: 100%; height: 180px; background: #1a1a1a; border: 1.5px solid #333; color: #fff; font-family: monospace; font-size: 0.7rem; padding: 10px; border-radius: 8px; resize: vertical; outline: none; margin-bottom: 12px;"></textarea>
+
+        <button class="action-btn" id="btn-save-cookies" onclick="saveCookies()" style="padding: 10px 8px; font-size: 0.68rem; margin-top: 0;">💾 Save Cookies</button>
+        
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+            <button class="skin-reset-btn" onclick="clearCookies()" style="margin-top: 0; color: #ff5555; border-color: #552222; background: #221111; flex: 1;">🗑️ Clear</button>
+            <button class="skin-reset-btn" id="btn-check-cookies" onclick="checkCookiesStatus()" style="margin-top: 0; color: var(--cyan); border-color: #225555; background: #112222; flex: 1;">🔍 Status</button>
+        </div>
+        
+        <div id="cookies-status-msg" style="margin-top: 14px; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; font-family: var(--font-bold); text-align: center; display: none;"></div>
+    </div>
+</div>
+
 <div class="app-shell">
 
     <!-- TOPBAR -->
@@ -1020,7 +1050,10 @@
             </div>
         </div>
         <div class="card card-url" style="margin-bottom:10px;">
-            <div class="section-label dark">YouTube URL</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <div class="section-label dark" style="margin-bottom:0;">YouTube URL</div>
+                <button onclick="openCookiesPanel()" style="background:none; border:none; color:var(--purple); font-family:var(--font-bold); font-size:0.6rem; letter-spacing:1px; text-transform:uppercase; cursor:pointer; display:flex; align-items:center; gap:3px;">🍪 Cookies</button>
+            </div>
             <input type="url" id="extract-url" placeholder="https://youtube.com/watch?v=..."
                    autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="url">
         </div>
@@ -1045,7 +1078,10 @@
             </div>
         </div>
         <div class="card card-url" style="margin-bottom:10px;">
-            <div class="section-label dark">YouTube Playlist URL</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <div class="section-label dark" style="margin-bottom:0;">YouTube Playlist URL</div>
+                <button onclick="openCookiesPanel()" style="background:none; border:none; color:var(--purple); font-family:var(--font-bold); font-size:0.6rem; letter-spacing:1px; text-transform:uppercase; cursor:pointer; display:flex; align-items:center; gap:3px;">🍪 Cookies</button>
+            </div>
             <input type="url" id="collect-url" placeholder="https://youtube.com/playlist?list=..."
                    autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="url">
         </div>
@@ -1807,6 +1843,105 @@
             if (geminiBubble) geminiBubble.textContent = 'Tap to select your file!';
         }
     })();
+
+    /* ── COOKIES SYSTEM ── */
+    function openCookiesPanel() {
+        const modal = document.getElementById('cookies-modal');
+        if (modal) {
+            modal.classList.add('open');
+            checkCookiesStatus();
+        }
+    }
+
+    function closeCookiesPanel() {
+        const modal = document.getElementById('cookies-modal');
+        if (modal) modal.classList.remove('open');
+    }
+
+    function cookiesModalBackdropClick(e) {
+        if (e.target.id === 'cookies-modal') closeCookiesPanel();
+    }
+
+    function saveCookies() {
+        const text = document.getElementById('cookies-text').value.trim();
+        const btn = document.getElementById('btn-save-cookies');
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
+        
+        fetch('/api/save-cookies', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cookies_text: text })
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.textContent = '💾 Save Cookies';
+            const msgEl = document.getElementById('cookies-status-msg');
+            msgEl.style.display = 'block';
+            if (data.success) {
+                msgEl.style.color = '#2ecc71';
+                msgEl.textContent = '✓ Saved successfully!';
+                setTimeout(() => { msgEl.style.display = 'none'; }, 3000);
+            } else {
+                msgEl.style.color = '#ff5555';
+                msgEl.textContent = '✕ Error: ' + (data.error || 'Failed to save');
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.textContent = '💾 Save Cookies';
+            const msgEl = document.getElementById('cookies-status-msg');
+            msgEl.style.display = 'block';
+            msgEl.style.color = '#ff5555';
+            msgEl.textContent = '✕ Connection error';
+        });
+    }
+
+    function clearCookies() {
+        if (!confirm('Are you sure you want to delete YouTube cookies from the server?')) return;
+        
+        fetch('/api/clear-cookies', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            const msgEl = document.getElementById('cookies-status-msg');
+            msgEl.style.display = 'block';
+            if (data.success) {
+                document.getElementById('cookies-text').value = '';
+                msgEl.style.color = '#ffaa00';
+                msgEl.textContent = '✓ Cookies deleted';
+                setTimeout(() => { msgEl.style.display = 'none'; }, 3000);
+            } else {
+                msgEl.style.color = '#ff5555';
+                msgEl.textContent = '✕ Error: ' + (data.error || 'Failed to clear');
+            }
+        });
+    }
+
+    function checkCookiesStatus() {
+        const text = document.getElementById('cookies-text');
+        const msgEl = document.getElementById('cookies-status-msg');
+        
+        fetch('/api/check-cookies')
+        .then(res => res.json())
+        .then(data => {
+            if (data.exists) {
+                text.value = data.content;
+                msgEl.style.display = 'block';
+                msgEl.style.color = '#00D4E8';
+                const sizeKb = (data.size_bytes / 1024).toFixed(1);
+                msgEl.textContent = `Active: Yes (${sizeKb} KB)`;
+            } else {
+                text.value = '';
+                msgEl.style.display = 'block';
+                msgEl.style.color = '#ffffff60';
+                msgEl.textContent = 'Active: No (No cookies found)';
+            }
+        });
+    }
 
 </script>
 </body>

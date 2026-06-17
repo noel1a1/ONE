@@ -112,8 +112,11 @@ def download_mp3():
         'retries': 5,
         'fragment_retries': 5,
         'http_chunk_size': 10485760,
-        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
     }
+
+    cookiefile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cookies.txt')
+    if os.path.exists(cookiefile) and os.path.getsize(cookiefile) > 0:
+        ydl_opts['cookiefile'] = cookiefile
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -133,11 +136,11 @@ def download_mp3():
         # Produce a concise, human-readable error instead of the full yt-dlp traceback
         err_str = str(e)
         if 'SSL' in err_str or 'EOF' in err_str:
-            friendly = 'SSL/Network error — YouTube blocked the connection. Try: disable VPN/proxy, or switch networks.'
+            friendly = 'SSL/Network error — YouTube blocked the connection. Try: configure YouTube cookies in the Cookies menu, disable VPN/proxy, or switch networks.'
         elif 'Unsupported URL' in err_str or 'is not a valid URL' in err_str:
             friendly = 'Invalid URL — paste a full YouTube video link.'
         elif 'Sign in' in err_str or 'age' in err_str.lower():
-            friendly = 'Age-restricted video — cannot download without login.'
+            friendly = 'Age-restricted video or bot block — configure cookies to bypass.'
         elif 'Private' in err_str or 'not available' in err_str:
             friendly = 'Video is private or unavailable.'
         else:
@@ -188,8 +191,11 @@ def playlist_download_worker(task_id, url):
         'retries': 5,
         'fragment_retries': 5,
         'http_chunk_size': 10485760,
-        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
     }
+
+    cookiefile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cookies.txt')
+    if os.path.exists(cookiefile) and os.path.getsize(cookiefile) > 0:
+        ydl_opts['cookiefile'] = cookiefile
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -203,6 +209,11 @@ def playlist_download_worker(task_id, url):
         if not safe_title:
             safe_title = "playlist"
 
+        # Check if we actually downloaded any mp3 files
+        mp3_files = [f for f in os.listdir(playlist_dir) if f.lower().endswith('.mp3')]
+        if not mp3_files:
+            raise Exception("No tracks were successfully downloaded. YouTube blocked the connection or the URL is invalid. Configure cookies in the Cookies menu to bypass.")
+
         # Store completed playlist dir for mobile file browser
         completed_playlists[task_id] = (playlist_dir, safe_title)
             
@@ -211,7 +222,53 @@ def playlist_download_worker(task_id, url):
             
     except Exception as e:
         if q:
+            try:
+                import shutil
+                shutil.rmtree(playlist_dir)
+            except Exception:
+                pass
             q.put(f"data: ERROR|{str(e)}\n\n")
+
+@app.route('/api/save-cookies', methods=['POST'])
+def save_cookies():
+    data = request.json
+    cookies_text = data.get('cookies_text', '')
+    
+    cookiefile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cookies.txt')
+    try:
+        with open(cookiefile, 'w', encoding='utf-8') as f:
+            f.write(cookies_text)
+        return jsonify({"success": True, "message": "Cookies saved successfully"})
+    except Exception as e:
+        return jsonify({"error": f"Failed to save cookies: {str(e)}"}), 500
+
+@app.route('/api/clear-cookies', methods=['POST'])
+def clear_cookies():
+    cookiefile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cookies.txt')
+    try:
+        if os.path.exists(cookiefile):
+            os.remove(cookiefile)
+        return jsonify({"success": True, "message": "Cookies cleared successfully"})
+    except Exception as e:
+        return jsonify({"error": f"Failed to clear cookies: {str(e)}"}), 500
+
+@app.route('/api/check-cookies', methods=['GET'])
+def check_cookies():
+    cookiefile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cookies.txt')
+    exists = os.path.exists(cookiefile)
+    size_bytes = os.path.getsize(cookiefile) if exists else 0
+    content = ""
+    if exists:
+        try:
+            with open(cookiefile, 'r', encoding='utf-8', errors='ignore') as f:
+                content = f.read()
+        except Exception:
+            pass
+    return jsonify({
+        "exists": exists,
+        "size_bytes": size_bytes,
+        "content": content
+    })
 
 @app.route('/api/start-playlist', methods=['POST'])
 def start_playlist():
@@ -617,6 +674,7 @@ def upscale_image():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/shutdown', methods=['POST'])
 def shutdown():
     print("Shutting down Flask server...")
     threading.Timer(0.5, lambda: os._exit(0)).start()
