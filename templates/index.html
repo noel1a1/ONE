@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ONE — one app to rule them all</title>
-    <meta name="description" content="ONE App — MP3 ripper, playlist collector, file shrinker, upscaler and Gemini AI powerup. One app to rule them all.">
+    <meta name="description" content="ONE App — MP3 ripper, playlist collector, file shrinker, upscaler. One app to rule them all.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Archivo+Black&family=DM+Sans:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
@@ -692,8 +692,7 @@
         }
         .gemini-btn:hover { background: #6345d4; }
         .gemini-btn:active { transform: scale(0.98); }
-        .gemini-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-
+        
         /* ── EXPAND INFO BAR ── */
         .info-bar {
             background: #1c1c1c;
@@ -1002,8 +1001,7 @@
         <button class="nav-pill" id="pill-collect" onclick="switchPanel('collect', this)">Playlist</button>
         <button class="nav-pill" id="pill-compress" onclick="switchPanel('compress', this)">Shrinker</button>
         <button class="nav-pill" id="pill-expand" onclick="switchPanel('expand', this)">Upscale</button>
-        <button class="nav-pill" id="pill-gemini" onclick="switchPanel('gemini', this)">Gemini ⚡</button>
-        <button class="nav-exit" onclick="shutdownApp()">✕ Exit</button>
+                <button class="nav-exit" onclick="shutdownApp()">✕ Exit</button>
     </div>
 
     <!-- ════════════════════════════════════
@@ -1123,11 +1121,7 @@
                         <input type="checkbox" id="expand-ai-enhance" checked>
                         <span>AI Enhance (FSRCNN)</span>
                     </label>
-                    <label class="check-item">
-                        <input type="checkbox" id="expand-gemini-guide" checked>
-                        <span>Gemini Suggestions</span>
-                    </label>
-                </div>
+                                    </div>
             </div>
             <div class="card card-forge">
                 <div class="diagonal-stripe"></div>

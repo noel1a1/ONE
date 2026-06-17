@@ -1,0 +1,716 @@
+<head><meta charset='utf-8'><style>body{font-family:sans-serif;line-height:1.6;max-width:800px;margin:40px auto;padding:0 20px;} table{border-collapse:collapse;width:100%;margin:20px 0;} th,td{border:1px solid #ddd;padding:8px;text-align:left;} th{background-color:#f4f4f4;} code{background:#f4f4f4;padding:2px 4px;border-radius:4px;} pre{background:#f4f4f4;padding:16px;border-radius:8px;overflow-x:auto;} blockquote{border-left:4px solid #ddd;margin:0;padding-left:16px;color:#666;}</style></head><body><h1>ONE App — Complete Documentation</h1>
+<blockquote>
+<p><strong>ONE</strong> — One app to rule them all. A self-hosted, password-protected multi-tool web application built with Python and Flask.</p>
+</blockquote>
+<hr />
+<h2>Table of Contents</h2>
+<ol>
+<li><a href="#1-project-overview">Project Overview</a></li>
+<li><a href="#2-how-it-works--architecture">How It Works — Architecture</a></li>
+<li><a href="#3-file-structure-explained">File Structure Explained</a></li>
+<li><a href="#4-every-feature-explained">Every Feature Explained</a></li>
+<li><a href="#5-api-reference">API Reference</a></li>
+<li><a href="#6-environment-variables-env">Environment Variables (.env)</a></li>
+<li><a href="#7-running-locally">Running Locally</a></li>
+<li><a href="#8-deployment-on-hugging-face-spaces">Deployment on Hugging Face Spaces</a></li>
+<li><a href="#9-how-to-edit-the-app">How to Edit the App</a></li>
+<li><a href="#10-troubleshooting-every-scenario">Troubleshooting Every Scenario</a></li>
+<li><a href="#11-security-reference">Security Reference</a></li>
+<li><a href="#12-pushing-updates-to-live-app">Pushing Updates to Live App</a></li>
+</ol>
+<hr />
+<h2>1. Project Overview</h2>
+<p><strong>ONE</strong> is a web application that combines multiple utility tools into one password-protected interface. It is written in Python using the Flask web framework and is deployed as a Docker container.</p>
+<h3>What it does</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>🎵 YouTube MP3 Downloader</td>
+<td>Downloads a single YouTube video as an MP3 audio file</td>
+</tr>
+<tr>
+<td>📋 YouTube Playlist Downloader</td>
+<td>Downloads an entire YouTube playlist as separate MP3 files with embedded thumbnails</td>
+</tr>
+<tr>
+<td>🗜️ File Compressor</td>
+<td>Compresses images (JPG, PNG, WebP) and PDFs to a target file size in KB</td>
+</tr>
+<tr>
+<td>🔍 AI Image Upscaler</td>
+<td>Upscales low-resolution images to print quality (A4, A5, Poster, Wallpaper) using AI (FSRCNN model)</td>
+</tr>
+</tbody>
+</table>
+<h3>Technology Stack</h3>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Technology</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Language</td>
+<td>Python 3.11</td>
+</tr>
+<tr>
+<td>Web Framework</td>
+<td>Flask</td>
+</tr>
+<tr>
+<td>Production Server</td>
+<td>Gunicorn</td>
+</tr>
+<tr>
+<td>Containerisation</td>
+<td>Docker</td>
+</tr>
+<tr>
+<td>AI Upscaling Model</td>
+<td>FSRCNN (via OpenCV DNN Super Resolution)</td>
+</tr>
+<tr>
+<td>Audio Processing</td>
+<td>FFmpeg + yt-dlp</td>
+</tr>
+<tr>
+<td>PDF Processing</td>
+<td>PyMuPDF (fitz)</td>
+</tr>
+<tr>
+<td>Image Processing</td>
+<td>Pillow + OpenCV</td>
+</tr>
+<tr>
+<td>Audio Metadata</td>
+<td>Mutagen</td>
+</tr>
+<tr>
+<td>Config/Secrets</td>
+<td>python-dotenv</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>2. How It Works — Architecture</h2>
+<p><code>User's Browser
+      │
+      │  HTTPS request to https://noelllllll-theone.hf.space
+      ▼
+Hugging Face Spaces (Docker Container)
+      │
+      │  Runs: gunicorn --bind 0.0.0.0:7860 app:app
+      ▼
+Flask Application (app.py)
+      │
+      ├── require_login()     ← Checks username + password BEFORE every request
+      │
+      ├── GET /               ← Serves the HTML frontend (templates/index.html)
+      │
+      ├── POST /api/download-mp3        ← Downloads single YouTube track
+      ├── POST /api/start-playlist      ← Starts playlist download in background thread
+      ├── GET  /api/playlist-progress/  ← Streams real-time progress to browser (SSE)
+      ├── GET  /playlist-files/         ← Renders download page for completed playlist
+      ├── GET  /api/playlist-dl/        ← Serves individual track file for download
+      ├── GET  /api/playlist-zip/       ← Builds and serves ZIP of all tracks
+      ├── POST /api/compress            ← Compresses uploaded file
+      ├── POST /api/upscale             ← Upscales uploaded image using FSRCNN AI model
+      └── GET  /api/download            ← Serves processed file back to browser</code></p>
+<h3>Request Lifecycle</h3>
+<ol>
+<li>User visits the URL → browser shows a login popup.</li>
+<li>User enters username &amp; password → browser caches them and sends with every future request.</li>
+<li>Flask's <code>require_login()</code> runs <strong>before every single route</strong> and checks the credentials.</li>
+<li>If correct → the actual route handler runs and returns a response.</li>
+<li>If wrong → the server returns HTTP 401 and the browser shows the login popup again.</li>
+</ol>
+<hr />
+<h2>3. File Structure Explained</h2>
+<p><code>d:\The App\ONE\
+│
+├── app.py                  ← Main application logic (all routes, all features)
+├── requirements.txt        ← Python library dependencies
+├── Dockerfile              ← Docker build instructions for deployment
+├── Procfile                ← Heroku-style process definition (used by Gunicorn)
+├── README.md               ← Hugging Face Space configuration header
+├── .env                    ← Local secret keys (NEVER committed to Git)
+├── .gitignore              ← Tells Git what files to never track/upload
+├── .dockerignore           ← Tells Docker what files to ignore when building image
+├── start.bat               ← Windows shortcut to run the app locally
+├── create_shortcut.ps1     ← PowerShell script to create a desktop shortcut
+│
+├── templates/
+│   └── index.html          ← The entire frontend UI (single HTML file)
+│
+└── downloads/              ← Temporary storage for all processed files
+    └── FSRCNN_x4.pb        ← AI upscaling model (auto-downloaded on first run)</code></p>
+<h3>What each important file does</h3>
+<h4><code>app.py</code> — The Brain</h4>
+<p>This is the entire backend. It:
+- Starts the Flask web server
+- Enforces password authentication on every request
+- Handles all 10+ API endpoints
+- Manages background threads for playlist downloads
+- Communicates real-time progress to the browser via Server-Sent Events (SSE)</p>
+<h4><code>templates/index.html</code> — The Face</h4>
+<p>This is the entire frontend. It:
+- Contains all the HTML, CSS, and JavaScript in one file
+- Sends requests to the Python backend via <code>fetch()</code> API calls
+- Displays results and triggers file downloads</p>
+<h4><code>requirements.txt</code> — The Shopping List</h4>
+<p><code>flask           - Web framework
+yt-dlp          - YouTube downloader engine
+pillow          - Image processing
+pymupdf         - PDF processing
+opencv-contrib-python - AI upscaling (FSRCNN model)
+requests        - HTTP client (for downloading the AI model)
+python-dotenv   - Reads .env file for secrets
+mutagen         - Reads/writes MP3 metadata tags
+gunicorn        - Production-grade web server (used in deployment)</code></p>
+<h4><code>Dockerfile</code> — The Deployment Blueprint</h4>
+<p>Tells the hosting platform:
+1. Use Python 3.11
+2. Install system tools: <code>ffmpeg</code> (audio conversion), <code>libgl1</code> (OpenCV), etc.
+3. Install Python packages from <code>requirements.txt</code>
+4. Copy all app files into the container
+5. Start the app with Gunicorn</p>
+<h4><code>.env</code> — Your Secrets (Local Only)</h4>
+<p>This file is on your computer only and is <strong>never</strong> uploaded to GitHub or Hugging Face.
+<code>APP_USERNAME=admin
+APP_PASSWORD=admin123</code>
+On Hugging Face, these are stored as <strong>Secrets</strong> in the Space settings.</p>
+<h4><code>.gitignore</code> — The Privacy Guard</h4>
+<p>Tells Git to never track or upload these paths:
+<code>venv/           - Python virtual environment (huge, not needed)
+__pycache__/    - Python compiled cache files
+.env            - Your secret keys
+downloads/      - Temporary processed files
+*.pyc           - Python bytecode</code></p>
+<hr />
+<h2>4. Every Feature Explained</h2>
+<h3>🎵 YouTube MP3 Downloader</h3>
+<ul>
+<li><strong>Input:</strong> A YouTube video URL</li>
+<li><strong>Process:</strong> <code>yt-dlp</code> downloads the best available audio stream, then FFmpeg converts it to MP3 at 192kbps quality</li>
+<li><strong>Output:</strong> An MP3 file that automatically downloads in the browser</li>
+<li><strong>File naming:</strong> UUID prefix is stripped before download so the user gets a clean filename</li>
+</ul>
+<h3>📋 YouTube Playlist Downloader</h3>
+<ul>
+<li><strong>Input:</strong> A YouTube playlist URL</li>
+<li><strong>Process:</strong></li>
+<li>A background thread is started immediately (so the browser doesn't time out)</li>
+<li>Each track is downloaded and converted to MP3 with embedded album art (thumbnail)</li>
+<li>Tracks are numbered: <code>01. Song Name.mp3</code>, <code>02. Song Name.mp3</code> etc.</li>
+<li>Progress is streamed to the browser in real-time using Server-Sent Events</li>
+<li><strong>Output:</strong> A dedicated page showing all tracks with individual download buttons + a "Download All as ZIP" button</li>
+<li><strong>Important:</strong> Downloaded playlist files are stored in memory only. If the server restarts, the download page links will no longer work. Users must re-download.</li>
+</ul>
+<h3>🗜️ File Compressor</h3>
+<ul>
+<li><strong>Supported formats:</strong> JPG/JPEG, PNG, WebP, PDF, and any other file (compressed to ZIP)</li>
+<li><strong>Input:</strong> A file + a target size in KB</li>
+<li><strong>Process for images (JPG):</strong> Uses a binary search algorithm to find the optimal JPEG quality setting that results in a file closest to (but not exceeding) the target size</li>
+<li><strong>Process for PNG:</strong> Uses lossless optimization only (PNG cannot be compressed lossy without losing transparency)</li>
+<li><strong>Process for PDF:</strong> Progressively reduces DPI (from 150 down to 30) until the file fits the target size</li>
+<li><strong>Process for other files:</strong> Wraps the file in a ZIP archive</li>
+<li><strong>Output:</strong> The compressed file, downloaded automatically</li>
+</ul>
+<h3>🔍 AI Image Upscaler</h3>
+<ul>
+<li><strong>Input:</strong> An image (JPG, PNG, WebP) + target format (A4, A5, Poster, Wallpaper) + orientation</li>
+<li><strong>AI Model:</strong> FSRCNN (Fast Super Resolution Convolutional Neural Network) — a deep learning model specifically trained for image super-resolution. The <code>.pb</code> file is the trained model weights</li>
+<li><strong>Process:</strong></li>
+<li>On first startup, the model is automatically downloaded from GitHub (~1MB)</li>
+<li>The image is optionally denoised using OpenCV's non-local means denoising</li>
+<li>The FSRCNN model upscales the image by 4x (applied repeatedly if more is needed)</li>
+<li>Contrast and brightness are adjusted (10% contrast boost by default)</li>
+<li>The image is resized to exactly match the target dimensions using Lanczos resampling</li>
+<li>Center-cropped to fit the canvas perfectly</li>
+<li>An unsharp mask (sharpening filter) is applied for crisp output</li>
+<li><strong>Output sizes:</strong>
+  | Format | Portrait | Landscape |
+  |---|---|---|
+  | A4 | 2480 × 3508 px | 3508 × 2480 px |
+  | A5 | 1748 × 2480 px | 2480 × 1748 px |
+  | Poster | 2480 × 3508 px | 3508 × 2480 px |
+  | Wallpaper | 2160 × 3840 px | 3840 × 2160 px |</li>
+</ul>
+<hr />
+<h2>5. API Reference</h2>
+<p>All endpoints require HTTP Basic Authentication.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Description</th>
+<th>Body</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/</code></td>
+<td>Serves the main UI</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/download-mp3</code></td>
+<td>Download single YouTube MP3</td>
+<td><code>{"url": "..."}</code></td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/start-playlist</code></td>
+<td>Start playlist download</td>
+<td><code>{"url": "..."}</code></td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/playlist-progress/&lt;task_id&gt;</code></td>
+<td>Stream progress (SSE)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/playlist-files/&lt;task_id&gt;</code></td>
+<td>Playlist file browser page</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/playlist-dl/&lt;task_id&gt;/&lt;filename&gt;</code></td>
+<td>Download single playlist track</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/playlist-zip/&lt;task_id&gt;</code></td>
+<td>Download all tracks as ZIP</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/compress</code></td>
+<td>Compress a file</td>
+<td><code>multipart/form-data</code> with <code>file</code> + <code>target_kb</code></td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/upscale</code></td>
+<td>Upscale an image</td>
+<td><code>multipart/form-data</code> with <code>file</code> + <code>format</code> + <code>orientation</code></td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/download?file=&lt;filename&gt;</code></td>
+<td>Download a processed file</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>6. Environment Variables (.env)</h2>
+<h3>Local <code>.env</code> file (at <code>d:\The App\ONE\.env</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>APP_USERNAME</code></td>
+<td><code>admin</code></td>
+<td>Login username for the app</td>
+</tr>
+<tr>
+<td><code>APP_PASSWORD</code></td>
+<td><code>admin123</code></td>
+<td>Login password for the app</td>
+</tr>
+</tbody>
+</table>
+<h3>How to change the password (Local)</h3>
+<ol>
+<li>Open <code>d:\The App\ONE\.env</code> in any text editor</li>
+<li>Change <code>APP_PASSWORD=admin123</code> to your new password</li>
+<li>Save the file and restart the app</li>
+</ol>
+<h3>How to change the password (Hugging Face)</h3>
+<ol>
+<li>Go to your Space → <strong>Settings</strong> tab</li>
+<li>Scroll to <strong>Variables and secrets</strong></li>
+<li>Find <code>APP_PASSWORD</code> → click Edit → type new password → Save</li>
+<li>The app restarts automatically</li>
+</ol>
+<hr />
+<h2>7. Running Locally</h2>
+<h3>Prerequisites</h3>
+<ul>
+<li>Python 3.11+</li>
+<li>FFmpeg installed and on PATH (<a href="https://ffmpeg.org/download.html">Download here</a>)</li>
+<li>Git</li>
+</ul>
+<h3>First-time setup</h3>
+<p>```powershell</p>
+<h1>Navigate to the app folder</h1>
+<p>cd "D:\The App\ONE"</p>
+<h1>Create a virtual environment</h1>
+<p>python -m venv venv</p>
+<h1>Activate it</h1>
+<p>.\venv\Scripts\activate</p>
+<h1>Install all dependencies</h1>
+<p>pip install -r requirements.txt</p>
+<h1>Run the app</h1>
+<p>python app.py
+```</p>
+<h3>After first-time setup (daily use)</h3>
+<p>Just double-click <code>start.bat</code> — it does all of the above automatically.</p>
+<h3>Accessing the app</h3>
+<p>Open your browser and go to: <code>http://localhost:5000</code></p>
+<hr />
+<h2>8. Deployment on Hugging Face Spaces</h2>
+<h3>Live URL</h3>
+<p><code>https://noelllllll-theone.hf.space</code></p>
+<h3>How deployment works</h3>
+<ol>
+<li>You push code to your Hugging Face Space git remote.</li>
+<li>Hugging Face detects the <code>Dockerfile</code> and automatically builds a Docker image.</li>
+<li>The Docker image is run as a container, which starts Gunicorn on the internal port.</li>
+<li>Hugging Face proxies all traffic from the public URL to this container.</li>
+</ol>
+<blockquote>
+<p>[!IMPORTANT]
+<strong>Secrets are NOT in the code.</strong> All API keys and passwords are stored in the Space's "Secrets" settings, not in any file. This is what keeps your keys secure even though the code is "public".</p>
+</blockquote>
+<h3>Space Settings</h3>
+<ul>
+<li><strong>Space URL:</strong> https://huggingface.co/spaces/noelllllll/TheOne</li>
+<li><strong>SDK:</strong> Docker</li>
+<li><strong>Port:</strong> Automatically handled by Hugging Face</li>
+</ul>
+<h3>Secrets to add in Space Settings</h3>
+<table>
+<thead>
+<tr>
+<th>Secret Name</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>APP_USERNAME</code></td>
+<td><code>admin</code></td>
+</tr>
+<tr>
+<td><code>APP_PASSWORD</code></td>
+<td>Your chosen password</td>
+</tr>
+<tr>
+<td><code>GEMINI_API_KEY</code></td>
+<td>From your <code>.env</code> file</td>
+</tr>
+<tr>
+<td><code>GEMINI_API_KEY_2</code></td>
+<td>From your <code>.env</code> file</td>
+</tr>
+<tr>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr>
+<td><code>GEMINI_API_KEY_10</code></td>
+<td>From your <code>.env</code> file</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>[!NOTE]
+The Gemini API keys are for the AI image upscaler's "Gemini guidance" feature. The app will still work without them — it just falls back to local defaults for image processing parameters.</p>
+</blockquote>
+<hr />
+<h2>9. How to Edit the App</h2>
+<h3>Editing the UI (what users see)</h3>
+<p><strong>File to edit:</strong> <code>d:\The App\ONE\templates\index.html</code></p>
+<p>This is a single HTML file containing all the CSS styles, HTML layout, and JavaScript logic. Open it in VS Code and edit directly.</p>
+<h3>Editing the Backend (how things work)</h3>
+<p><strong>File to edit:</strong> <code>d:\The App\ONE\app.py</code></p>
+<p>Key locations inside <code>app.py</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Line range</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lines 1–29</td>
+<td>Imports and setup</td>
+</tr>
+<tr>
+<td>Lines 30–43</td>
+<td>Password authentication setup</td>
+</tr>
+<tr>
+<td>Lines 52–62</td>
+<td>AI model auto-download logic</td>
+</tr>
+<tr>
+<td>Lines 70–76</td>
+<td>Main page route</td>
+</tr>
+<tr>
+<td>Lines 78–113</td>
+<td>YouTube single MP3 download</td>
+</tr>
+<tr>
+<td>Lines 115–205</td>
+<td>YouTube playlist download (worker + progress + file browser)</td>
+</tr>
+<tr>
+<td>Lines 395–472</td>
+<td>File compression logic</td>
+</tr>
+<tr>
+<td>Lines 474–579</td>
+<td>AI image upscaling logic</td>
+</tr>
+</tbody>
+</table>
+<h3>Adding a new feature</h3>
+<ol>
+<li>Add the new route/function in <code>app.py</code></li>
+<li>Add the UI button/section in <code>templates/index.html</code></li>
+<li>Add any new required libraries to <code>requirements.txt</code></li>
+<li>Test locally with <code>python app.py</code></li>
+<li>Deploy by pushing to Hugging Face (see Section 12)</li>
+</ol>
+<h3>Changing the app name or branding</h3>
+<ul>
+<li><strong>Title in browser tab:</strong> Edit the <code>&lt;title&gt;</code> tag in <code>templates/index.html</code></li>
+<li><strong>App name on Hugging Face:</strong> Edit <code>README.md</code> (change <code>title: TheOne</code>)</li>
+<li><strong>Emoji on Hugging Face:</strong> Edit <code>README.md</code> (change <code>emoji: 🚀</code>)</li>
+</ul>
+<hr />
+<h2>10. Troubleshooting Every Scenario</h2>
+<h3>The app won't start locally</h3>
+<p><strong>Symptom:</strong> Running <code>python app.py</code> gives an error.</p>
+<table>
+<thead>
+<tr>
+<th>Error message</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ModuleNotFoundError: No module named 'flask'</code></td>
+<td>Run <code>pip install -r requirements.txt</code></td>
+</tr>
+<tr>
+<td><code>ModuleNotFoundError: No module named 'cv2'</code></td>
+<td>Run <code>pip install opencv-contrib-python</code></td>
+</tr>
+<tr>
+<td><code>FileNotFoundError: ffmpeg not found</code></td>
+<td>Install FFmpeg and add it to your system PATH</td>
+</tr>
+<tr>
+<td><code>Port 5000 already in use</code></td>
+<td>Close other apps using port 5000, or change port in <code>app.py</code> line 587</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3>The Hugging Face app shows "Building" for a long time</h3>
+<p><strong>Normal build time:</strong> 3–8 minutes (Docker has to install FFmpeg, OpenCV, etc.)
+If it is stuck for more than 15 minutes:
+1. Go to the <strong>Logs</strong> tab on your Space page.
+2. Read the error at the bottom.
+3. If it says a package failed to install, it may be a network issue. Click <strong>Factory restart</strong> in the Settings tab.</p>
+<hr />
+<h3>The Hugging Face app shows "Error" / "Stopped"</h3>
+<ol>
+<li>Go to the <strong>Logs</strong> tab.</li>
+<li>Look for <code>ERROR</code> or <code>Exception</code> lines.</li>
+<li>Common causes:</li>
+<li>A missing secret → add the missing environment variable in Settings → Secrets</li>
+<li>A Python crash → read the traceback and fix the bug in <code>app.py</code></li>
+<li>After fixing, click <strong>Restart this Space</strong> in the Settings tab.</li>
+</ol>
+<hr />
+<h3>Login popup keeps appearing / can't log in</h3>
+<p><strong>On your browser:</strong>
+- Make sure <strong>Caps Lock is OFF</strong>.
+- The default username is <code>admin</code> and password is <code>admin123</code>.
+- If you changed the password in Secrets but it still doesn't work, try a Private/Incognito window (your browser may have cached the old password).
+- To force your browser to forget the cached credentials: clear your browser's saved passwords for the site.</p>
+<p><strong>If you forgot the password:</strong>
+1. Go to Hugging Face Space → Settings → Secrets
+2. Find <code>APP_PASSWORD</code> and change it to something you know
+3. The Space restarts automatically</p>
+<hr />
+<h3>YouTube download fails</h3>
+<table>
+<thead>
+<tr>
+<th>Error</th>
+<th>Cause</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Video unavailable</code></td>
+<td>The video is private, deleted, or region-blocked</td>
+<td>Use a different video</td>
+</tr>
+<tr>
+<td><code>Sign in to confirm your age</code></td>
+<td>Age-restricted video</td>
+<td>yt-dlp may not handle this without cookies</td>
+</tr>
+<tr>
+<td><code>HTTP Error 429: Too Many Requests</code></td>
+<td>YouTube is rate-limiting the server's IP</td>
+<td>Wait 10–30 minutes and try again</td>
+</tr>
+<tr>
+<td><code>ffmpeg not found</code></td>
+<td>FFmpeg not installed in the container</td>
+<td>Rebuild the Docker image (it should install automatically)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3>Downloaded files are lost after server restart</h3>
+<p><strong>This is by design.</strong> The <code>downloads/</code> folder is inside the container and is not persistent on Hugging Face free tier. All processed files are gone when the container restarts. Users must re-process their files each session.</p>
+<p><strong>To make files persistent (advanced):</strong> You would need to mount an external storage volume, which is not available on the free Hugging Face tier.</p>
+<hr />
+<h3>The AI upscaler is very slow</h3>
+<p>This is expected on free hosting. The FSRCNN model runs on CPU (no GPU on free tier). Processing times:
+- Small image (&lt; 1 MP): ~10–20 seconds
+- Medium image (1–4 MP): ~30–90 seconds
+- Large image (&gt; 4 MP): ~2–5 minutes</p>
+<p>If it times out: the default timeout is 120 seconds (set in <code>Procfile</code> and <code>Dockerfile</code>). For very large images, this may not be enough. You can increase it by editing the <code>--timeout 120</code> value.</p>
+<hr />
+<h3>File compression result is larger than the target</h3>
+<ul>
+<li>For <strong>PNG files</strong>: PNG is lossless and cannot be compressed below a certain threshold without losing transparency. This is a known limitation. Convert to JPG for better compression.</li>
+<li>For <strong>PDF files</strong>: If every page is already a low-quality image, there is a floor below which it cannot go.</li>
+</ul>
+<hr />
+<h3>App says "No Gemini API keys configured"</h3>
+<p>This only affects the AI Image Upscaler's "Gemini guidance" feature. The app still works:
+- Add your <code>GEMINI_API_KEY</code> to the Space Secrets (or <code>.env</code> locally)
+- The app will use local default enhancement parameters if no key is present</p>
+<hr />
+<h3>Hugging Face Space goes to sleep</h3>
+<p>Free Hugging Face Spaces pause after <strong>48 hours of inactivity</strong>. When someone visits the URL, it wakes up in about 30–60 seconds automatically.</p>
+<p><strong>To prevent sleeping:</strong> Use <a href="https://uptimerobot.com/">UptimeRobot</a> — set up a free monitor that pings your URL every 20 minutes. This keeps the Space awake indefinitely.</p>
+<hr />
+<h3>App is working but downloads aren't starting</h3>
+<p>This is usually a browser issue, not a server issue:
+- Check if your browser is <strong>blocking pop-ups or downloads</strong> from the site
+- Try in a different browser (Chrome works best)
+- Check if your browser's download folder is full or write-protected</p>
+<hr />
+<h2>11. Security Reference</h2>
+<h3>What is protected</h3>
+<ul>
+<li>✅ Every single page and API endpoint is protected by the password</li>
+<li>✅ API keys are stored as Secrets (not in code)</li>
+<li>✅ <code>.env</code> file is in <code>.gitignore</code> (never uploaded to GitHub)</li>
+<li>✅ File paths are sanitized to prevent directory traversal attacks</li>
+<li>✅ Filenames are stripped of dangerous characters (<code>/ \ * ? : " &lt; &gt; |</code>)</li>
+</ul>
+<h3>What is NOT protected (known limitations)</h3>
+<ul>
+<li>⚠️ Basic Auth sends credentials in Base64 encoding. On HTTP (not HTTPS), these can be intercepted. Hugging Face serves over HTTPS automatically, so this is not an issue in production.</li>
+<li>⚠️ There is no rate limiting on the login. Someone could theoretically brute-force the password. Use a strong password.</li>
+<li>⚠️ Downloaded files are stored on the server temporarily. Anyone who knows the exact UUID filename can download them without a password (the <code>/api/download?file=</code> endpoint checks for file existence, not auth — actually, auth IS enforced on all routes via <code>require_login</code>).</li>
+</ul>
+<h3>To change the password</h3>
+<ol>
+<li><strong>Locally:</strong> Edit <code>.env</code> → change <code>APP_PASSWORD</code> → restart app</li>
+<li><strong>Hugging Face:</strong> Settings → Secrets → Edit <code>APP_PASSWORD</code> → Space restarts automatically</li>
+</ol>
+<hr />
+<h2>12. Pushing Updates to Live App</h2>
+<h3>Workflow for making changes</h3>
+<p><code>1. Edit files locally in D:\The App\ONE\
+2. Test locally by running python app.py
+3. Push to Hugging Face to go live</code></p>
+<h3>Step-by-step push commands</h3>
+<p>```powershell</p>
+<h1>Navigate to the app folder</h1>
+<p>cd "D:\The App\ONE"</p>
+<h1>Stage all changed files</h1>
+<p>git add .</p>
+<h1>Save the changes with a description</h1>
+<p>git commit -m "Brief description of what you changed"</p>
+<h1>Push to Hugging Face (makes changes live in ~3 minutes)</h1>
+<p>git push huggingface main
+```</p>
+<h3>To also push to GitHub (backup)</h3>
+<p><code>powershell
+git push origin main</code></p>
+<h3>Quick reference for common edits</h3>
+<table>
+<thead>
+<tr>
+<th>What you want to change</th>
+<th>File to edit</th>
+<th>Command after saving</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UI design / layout</td>
+<td><code>templates/index.html</code></td>
+<td><code>git add . &amp;&amp; git commit -m "UI update" &amp;&amp; git push huggingface main</code></td>
+</tr>
+<tr>
+<td>Add a new tool/feature</td>
+<td><code>app.py</code> + <code>index.html</code></td>
+<td>Same as above</td>
+</tr>
+<tr>
+<td>Change the password</td>
+<td>Hugging Face Space Settings → Secrets</td>
+<td>No push needed</td>
+</tr>
+<tr>
+<td>Add a new Python library</td>
+<td><code>requirements.txt</code></td>
+<td>Push triggers a full Docker rebuild</td>
+</tr>
+<tr>
+<td>Change timeout/workers</td>
+<td><code>Procfile</code> or <code>Dockerfile</code></td>
+<td>Push triggers a full Docker rebuild</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>[!WARNING]
+After pushing changes to <code>requirements.txt</code> or <code>Dockerfile</code>, Hugging Face will do a <strong>full rebuild</strong> which can take 5–10 minutes. Your app will be unavailable during this time.</p>
+<p>[!TIP]
+Changes to <code>app.py</code> and <code>templates/index.html</code> only trigger a <strong>fast restart</strong> (about 30 seconds). Make all your non-dependency changes in these files to minimise downtime.</p>
+</blockquote>
+<hr />
+<p><em>Documentation generated for ONE App — June 2026</em></p></body>
